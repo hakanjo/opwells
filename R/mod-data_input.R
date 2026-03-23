@@ -18,13 +18,22 @@ mod_data_input_ui <- function(id) {
     ),
     actionButton(ns("clear_sheet"), "Rensa kalkylblad"),
     uiOutput(ns("sheet_ui")),
-    h5("Förhandsgranskning"),
-    tableOutput(ns("preview")),
     h5("Likert Score Computation"),
     helpText("Select up to 10 columns containing Likert responses (0-4) to sum and scale."),
     uiOutput(ns("likert_selector_ui")),
     actionButton(ns("compute_scores"), "Compute Scaled Scores"),
     uiOutput(ns("score_status"))
+  )
+}
+
+mod_data_preview_ui <- function(id) {
+  ns <- NS(id)
+
+  tagList(
+    helpText(
+      "Förhandsgranska de första raderna av din data här."
+    ),
+    tableOutput(ns("preview"))
   )
 }
 
@@ -231,8 +240,13 @@ mod_data_input_server <- function(id) {
     })
 
     output$preview <- renderTable({
-      req(ncol(data()) > 0)
-      head(data(), 10)
+      validate(
+        need(
+          ncol(data()) > 0 && nrow(data()) > 0,
+          "Ingen data att förhandsgranska ännu. Klistra in eller ladda upp data under fliken 'Ladda data'."
+        )
+      )
+      head(data(), 20)
     })
 
     data

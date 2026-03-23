@@ -56,56 +56,75 @@ mod_plot_server <- function(id, data = NULL) {
       # Filter to selected groups
       plot_data <- ref_df[ref_df$group %in% c(input$group1, input$group2), ]
       req(nrow(plot_data) == 2)
-      
+
       # Ensure group1 is on top and group2 is on bottom
       plot_data$group_position <- factor(
         plot_data$group,
-        levels = c(input$group1, input$group2),
-        labels = c("1", "2")
+        levels = c(input$group2, input$group1),
+        labels = c("2", "1")
       )
       
       # Create color and shape mapping
-      plot_data$point_color <- ifelse(plot_data$group_position == "1", "green", "blue")
+      plot_data$point_color <- ifelse(plot_data$group_position == "1", "#5EAC34", "#4481BA")
       plot_data$point_shape <- ifelse(plot_data$group_position == "1", 21, 23)
       
       ggplot(plot_data, aes(x = mean, y = group_position)) +
-        # Error bars for +/- 1 SD
-        geom_errorbarh(
-          aes(xmin = mean - sd, xmax = mean + sd),
-          height = 0.2,
-          color = "black",
-          size = 1
-        ) +
-        # Points
-        geom_point(
-          aes(fill = point_color, shape = point_shape),
-          size = 5,
-          stroke = 1
-        ) +
-        # Manual color and shape scales
-        scale_fill_identity() +
-        scale_shape_identity() +
-        # Axis labels and limits
-        scale_x_continuous(
-          name = "Score",
-          limits = c(0, 100),
-          breaks = seq(0, 100, by = 20)
-        ) +
-        scale_y_discrete(
-          name = "Group",
-          labels = c("1" = input$group1, "2" = input$group2),
-          drop = FALSE
-        ) +
-        labs(
-          title = "Reference: Mean Scores with ±1 SD Range"
-        ) +
-        theme_minimal() +
-        theme(
-          plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-          axis.title = element_text(size = 12),
-          axis.text = element_text(size = 11),
-          panel.grid.minor = element_blank()
+      geom_segment(
+        aes(
+          x = mean - sd,
+          xend = mean + sd,
+          y = group_position,
+          yend = group_position
+        ),
+        color = "black",
+        linewidth = 1,
+        arrow = arrow(
+          ends = "both",
+          type = "closed",
+          length = unit(0.25, "cm")
         )
+      ) +
+      geom_segment(
+        aes(
+          x = mean,
+          xend = mean,
+          y = group_position,
+          yend = 0
+        ),
+        color = "grey70",
+        linewidth = 0.5
+      ) +
+      geom_point(
+        aes(fill = point_color, shape = point_shape),
+        size = 5,
+        stroke = 1.5
+      ) +
+      geom_text(
+        aes(label = paste0(group, "\n", round(mean, 0), " ± ", round(sd, 0))),
+        vjust = -0.5,
+        size = 5,
+        color = "black",
+        fontface = "bold"
+      ) +
+      scale_fill_identity() +
+      scale_shape_identity() +
+      scale_x_continuous(
+        limits = c(0, 100),
+        breaks = seq(0, 100, by = 10)
+      ) +
+      labs(
+        x = NULL,
+        y = NULL,
+        caption = "Medelvärde ±1 standardavvikelse."
+      ) +
+      theme_minimal() +
+      theme(
+        panel.grid = element_blank(),
+        axis.line.x = element_line(linewidth = 1, color = "black"),
+        plot.caption = element_text(size = 12, color = "grey40"),
+        axis.text = element_text(size = 12),
+        axis.text.y = element_blank()
+      )
     })
 
     # User data plot
@@ -210,53 +229,78 @@ mod_plot_server <- function(id, data = NULL) {
       # Assign group positions
       summary_data$group_position <- factor(
         summary_data[[group_col_name]],
-        levels = c(input$selected_group1, input$selected_group2),
-        labels = c("1", "2")
+        levels = c(input$selected_group2, input$selected_group1),
+        labels = c("2", "1")
       )
       req(nrow(summary_data) >= 2, "Could not find both groups in data.")
       
       # Create color and shape mapping
-      summary_data$point_color <- ifelse(summary_data$group_position == "1", "green", "blue")
+      summary_data$group_label <- as.character(summary_data[[group_col_name]])
+      summary_data$point_color <- ifelse(summary_data$group_position == "1", "#5EAC34", "#4481BA")
       summary_data$point_shape <- ifelse(summary_data$group_position == "1", 21, 23)
-      
+
       ggplot(summary_data, aes(x = mean, y = group_position)) +
-        # Error bars for +/- 1 SD
-        geom_errorbarh(
-          aes(xmin = pmax(0, mean - sd), xmax = pmin(100, mean + sd)),
-          height = 0.2,
-          color = "black",
-          size = 1
-        ) +
-        # Points
-        geom_point(
-          aes(fill = point_color, shape = point_shape),
-          size = 5,
-          stroke = 1
-        ) +
-        # Manual color and shape scales
-        scale_fill_identity() +
-        scale_shape_identity() +
-        # Axis labels and limits
-        scale_x_continuous(
-          name = "Scaled Score",
-          limits = c(0, 100),
-          breaks = seq(0, 100, by = 20)
-        ) +
-        scale_y_discrete(
-          name = "Group",
-          labels = c("1" = input$selected_group1, "2" = input$selected_group2),
-          drop = FALSE
-        ) +
-        labs(
-          title = "User Data: Mean Scaled Scores with ±1 SD Range"
-        ) +
-        theme_minimal() +
-        theme(
-          plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-          axis.title = element_text(size = 12),
-          axis.text = element_text(size = 11),
-          panel.grid.minor = element_blank()
+      geom_segment(
+        aes(
+          x = mean - sd,
+          xend = mean + sd,
+          y = group_position,
+          yend = group_position
+        ),
+        color = "black",
+        linewidth = 1,
+        arrow = arrow(
+          ends = "both",
+          type = "closed",
+          length = unit(0.25, "cm")
         )
+      ) +
+      geom_segment(
+        aes(
+          x = mean,
+          xend = mean,
+          y = group_position,
+          yend = 0
+        ),
+        color = "grey70",
+        linewidth = 0.5
+      ) +
+      geom_point(
+        aes(fill = point_color, shape = point_shape),
+        size = 5,
+        stroke = 1.5
+      ) +
+      geom_text(
+        aes(
+          label = paste0(
+            group_label, "\n",
+            round(mean, 0), ifelse(!is.na(sd), paste0(" ± ", round(sd, 0)), "")
+          )
+        ),
+        vjust = -0.5,
+        size = 5,
+        color = "black",
+        fontface = "bold"
+      ) +
+      scale_fill_identity() +
+      scale_shape_identity() +
+      scale_x_continuous(
+        limits = c(0, 100),
+        breaks = seq(0, 100, by = 10)
+      ) +
+      labs(
+        x = NULL,
+        y = NULL,
+        caption = "Medelvärde ±1 standardavvikelse."
+      ) +
+      theme_minimal() +
+      theme(
+        panel.grid = element_blank(),
+        axis.line.x = element_line(linewidth = 1, color = "black"),
+        plot.caption = element_text(size = 12, color = "grey40"),
+        axis.text = element_text(size = 12),
+        axis.text.y = element_blank()
+      )
     })
   })
 }

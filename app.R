@@ -15,11 +15,15 @@ ui <- fluidPage(
   titlePanel("Äldres välbefinnande"),
   tabsetPanel(
     tabPanel(
-      "Load Data",
+      "Ladda data",
       mod_data_input_ui("data_input")
     ),
     tabPanel(
-      "Plot Data",
+      "Förhandsgranskning av data",
+      mod_data_preview_ui("data_input")
+    ),
+    tabPanel(
+      "Plotta data",
       mod_plot_ui("plot")
     )
   )
