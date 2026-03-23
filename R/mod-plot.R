@@ -117,6 +117,15 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         y = NULL,
         caption = "Medelvärde ±1 standardavvikelse."
       ) +
+      annotate(
+        "text", label = "Lägst välbefinnande",
+        x = 0, y = -Inf, vjust = -1.5, hjust = "left", size = 5,
+        color = "grey70"
+      ) +
+      annotate("text", label = "Högst välbefinnande",
+        x = 100, y = -Inf, , vjust = -1.5, hjust = "right", size = 5,
+        color = "grey70"
+      ) +
       theme_minimal() +
       theme(
         panel.grid = element_blank(),
@@ -293,6 +302,15 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         x = NULL,
         y = NULL,
         caption = "Medelvärde ±1 standardavvikelse."
+      ) +
+      annotate(
+        "text", label = "Lägst välbefinnande",
+        x = 0, y = -Inf, vjust = -1.5, hjust = "left", size = 5,
+        color = "grey70"
+      ) +
+      annotate("text", label = "Högst välbefinnande",
+        x = 100, y = -Inf, , vjust = -1.5, hjust = "right", size = 5,
+        color = "grey70"
       ) +
       theme_minimal() +
       theme(
