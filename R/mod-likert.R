@@ -28,6 +28,7 @@ mod_likert_server <- function(id, data) {
 
     scores <- reactiveVal(NULL)
     likert_cols_selected <- reactiveVal(character(0))
+    previous_col_names <- reactiveVal(NULL)
     col_click_observers <- list()
 
     as_display_cell <- function(x, is_score_col = FALSE) {
@@ -104,13 +105,33 @@ mod_likert_server <- function(id, data) {
       cols <- names(current_data)
       if (!length(cols)) {
         likert_cols_selected(character(0))
+        previous_col_names(NULL)
         scores(NULL)
         col_click_observers <<- list()
         return()
       }
 
+      old_cols <- previous_col_names()
+      headers_changed <- is.null(old_cols) || !identical(old_cols, cols)
+
       # Keep only still-existing columns selected after upload/edit changes.
-      likert_cols_selected(intersect(likert_cols_selected(), cols))
+      selected_after_prune <- intersect(likert_cols_selected(), cols)
+
+      if (headers_changed) {
+        auto_cols <- grep("^OPWELLS", cols, value = TRUE, ignore.case = TRUE)
+        selected_after_prune <- unique(c(selected_after_prune, auto_cols))
+
+        if (length(selected_after_prune) > 10) {
+          selected_after_prune <- selected_after_prune[seq_len(10)]
+          showNotification(
+            "More than 10 columns matched current selection rules. Keeping the first 10.",
+            type = "warning"
+          )
+        }
+      }
+
+      likert_cols_selected(selected_after_prune)
+      previous_col_names(cols)
       selected_cols <- likert_cols_selected()
 
       col_click_observers <<- lapply(seq_along(cols), function(i) {
