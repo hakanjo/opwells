@@ -33,7 +33,7 @@ mod_plot_ui <- function(id) {
   )
 }
 
-mod_plot_server <- function(id, data = NULL) {
+mod_plot_server <- function(id, data = NULL, scores = NULL) {
   moduleServer(id, function(input, output, session) {
 
     # Reference data plot
@@ -134,7 +134,7 @@ mod_plot_server <- function(id, data = NULL) {
       req(is.data.frame(user_df), nrow(user_df) > 0)
 
       # Find likely grouping columns while tolerating mixed/complex column types.
-      candidate_names <- setdiff(names(user_df), "scaled_score")
+      candidate_names <- names(user_df)
       if (!length(candidate_names)) return()
 
       is_group_like <- vapply(candidate_names, function(col_nm) {
@@ -192,20 +192,21 @@ mod_plot_server <- function(id, data = NULL) {
         nzchar(input$selected_group1),
         nzchar(input$selected_group2)
       )
-      req("scaled_score" %in% names(user_df), "No scaled scores computed. Please compute them in the Load Data tab.")
-      
-      # Filter to selected groups
-      plot_data <- user_df[
-        as.character(user_df[[input$group_col]]) %in% c(input$selected_group1, input$selected_group2),
-      ]
+      validate(need(
+        !is.null(scores) && !is.null(scores()),
+        "No scaled scores computed. Please compute them in the Likert Score tab."
+      ))
+
+      # Filter to selected groups, keeping matching score values by row index
+      row_idx <- as.character(user_df[[input$group_col]]) %in% c(input$selected_group1, input$selected_group2)
+      plot_data <- user_df[row_idx, ]
       req(nrow(plot_data) > 0)
-      
-      # Calculate mean and SD of scaled_score for each group
-      plot_data$scaled_score_numeric <- suppressWarnings(as.numeric(plot_data$scaled_score))
+
+      plot_scores <- suppressWarnings(as.numeric(scores()[row_idx]))
 
       group_col_name <- input$group_col
       grp_vals <- as.character(plot_data[[group_col_name]])
-      split_scores <- split(plot_data$scaled_score_numeric, grp_vals)
+      split_scores <- split(plot_scores, grp_vals)
 
       summary_list <- lapply(names(split_scores), function(g) {
         x <- split_scores[[g]]

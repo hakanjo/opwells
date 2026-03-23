@@ -17,12 +17,7 @@ mod_data_input_ui <- function(id) {
       selected = "auto"
     ),
     actionButton(ns("clear_sheet"), "Rensa kalkylblad"),
-    uiOutput(ns("sheet_ui")),
-    h5("Likert Score Computation"),
-    helpText("Select up to 10 columns containing Likert responses (0-4) to sum and scale."),
-    uiOutput(ns("likert_selector_ui")),
-    actionButton(ns("compute_scores"), "Compute Scaled Scores"),
-    uiOutput(ns("score_status"))
+    uiOutput(ns("sheet_ui"))
   )
 }
 
@@ -132,7 +127,6 @@ mod_data_input_server <- function(id) {
     }
 
     sheet_data <- reactiveVal(make_empty_sheet())
-    likert_cols_selected <- reactiveVal(character(0))
 
     output$sheet_ui <- renderUI({
       rhandsontable::rHandsontableOutput(ns("sheet"), width = "100%", height = 450)
@@ -144,8 +138,6 @@ mod_data_input_server <- function(id) {
           sheet_data(),
           rowHeaders = TRUE,
           stretchH = "all",
-          width = "100%",
-          height = 450,
           minRows = 20,
           minCols = 12,
           colWidths = 100
@@ -189,48 +181,6 @@ mod_data_input_server <- function(id) {
 
     observeEvent(input$clear_sheet, {
       sheet_data(make_empty_sheet())
-      likert_cols_selected(character(0))
-    })
-
-    output$likert_selector_ui <- renderUI({
-      cols <- names(sheet_data())
-      if (length(cols) == 0) {
-        return(NULL)
-      }
-
-      checkboxGroupInput(
-        ns("likert_cols"),
-        "Select Likert columns:",
-        choices = cols,
-        selected = likert_cols_selected()
-      )
-    })
-
-    observeEvent(input$likert_cols, {
-      likert_cols_selected(input$likert_cols)
-    }, ignoreNULL = FALSE)
-
-    observeEvent(input$compute_scores, {
-      req(length(likert_cols_selected()) > 0)
-      req(setequal(likert_cols_selected(), likert_cols_selected()))
-
-      current_data <- sheet_data()
-      validate(
-        need(nrow(current_data) > 0, "No data loaded. Please paste or upload data first."),
-        need(length(likert_cols_selected()) <= 10, "Please select at most 10 Likert columns.")
-      )
-
-      updated_data <- compute_scaled_score(current_data, likert_cols_selected())
-      sheet_data(updated_data)
-    })
-
-    output$score_status <- renderUI({
-      if ("scaled_score" %in% names(sheet_data())) {
-        div(
-          class = "alert alert-success",
-          "✓ Scaled scores computed and added as 'scaled_score' column."
-        )
-      }
     })
 
     data <- reactive({
