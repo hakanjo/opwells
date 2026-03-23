@@ -19,10 +19,6 @@ ui <- fluidPage(
       mod_data_input_ui("data_input")
     ),
     tabPanel(
-      "Förhandsgranskning av data",
-      mod_data_preview_ui("data_input")
-    ),
-    tabPanel(
       "Likert Score",
       mod_likert_ui("likert")
     ),
