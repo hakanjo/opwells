@@ -376,7 +376,7 @@ mod_data_input_server <- function(id) {
 
       ext <- tolower(tools::file_ext(file_info$name))
       validate(
-        need(ext %in% c("xlsx", "csv", "tsv", "txt"), "Please upload xlsx, csv, or tsv/txt files.")
+        need(ext %in% c("xlsx", "csv", "tsv", "txt"), "Vänligen ladda upp xlsx-, csv-, eller tsv-/txt-filer.")
       )
 
       delimiter <- delimiter_choice()
@@ -387,8 +387,8 @@ mod_data_input_server <- function(id) {
       )
 
       validate(
-        need(!is.null(parsed) && !is.null(parsed$data), "Could not parse the uploaded file."),
-        need(!is.null(parsed$data) && ncol(parsed$data) > 0, "Uploaded file must contain at least one column.")
+        need(!is.null(parsed) && !is.null(parsed$data), "Kunde inte analysera den uppladdade filen."),
+        need(!is.null(parsed$data) && ncol(parsed$data) > 0, "Uppladdad fil måste innehålla minst en kolumn.")
       )
 
       refreshed_sheet <- as_sheet_display(parsed$data, header_row = parsed$header_row)
@@ -494,7 +494,7 @@ mod_data_input_server <- function(id) {
     observeEvent(input$sheet, {
       req(requireNamespace("rhandsontable", quietly = TRUE))
       updated <- rhandsontable::hot_to_r(input$sheet)
-      validate(need(!is.null(updated), "Could not read spreadsheet data."))
+      validate(need(!is.null(updated), "Kunde inte läsa kalkylbladdata."))
       synced <- sync_sheet_headers(updated, isTRUE(input$first_row_headers))
       current <- sheet_data()
 

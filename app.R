@@ -19,7 +19,7 @@ ui <- fluidPage(
       mod_data_input_ui("data_input")
     ),
     tabPanel(
-      "Likert Score",
+      "Likert-poäng",
       mod_likert_ui("likert")
     ),
     tabPanel(

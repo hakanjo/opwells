@@ -5,26 +5,26 @@ mod_plot_ui <- function(id) {
     br(),
     tabsetPanel(
       tabPanel(
-        "Reference Plot",
+        "Referensdata",
         br(),
         fluidRow(
           column(
             width = 4,
-            selectInput(ns("group1"), "Top group", choices = NULL),
-            selectInput(ns("group2"), "Bottom group", choices = NULL)
+            selectInput(ns("group1"), "Övre grupp", choices = NULL),
+            selectInput(ns("group2"), "Nedre grupp", choices = NULL)
           )
         ),
         plotOutput(ns("ref_plot"), height = "500px")
       ),
       tabPanel(
-        "User Data",
+        "Användardata",
         br(),
         fluidRow(
           column(
             width = 4,
-            selectInput(ns("group_col"), "Column defining groups", choices = NULL),
-            selectInput(ns("selected_group1"), "Top group", choices = NULL),
-            selectInput(ns("selected_group2"), "Bottom group", choices = NULL)
+            selectInput(ns("group_col"), "Gruppdefinition", choices = NULL),
+            selectInput(ns("selected_group1"), "Övre grupp", choices = NULL),
+            selectInput(ns("selected_group2"), "Nedre grupp", choices = NULL)
           )
         ),
         plotOutput(ns("user_plot"), height = "500px")
@@ -203,7 +203,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       )
       validate(need(
         !is.null(scores) && !is.null(scores()),
-        "No scaled scores computed. Please compute them in the Likert Score tab."
+        "Ingen skalad poäng beräknad. Beräkna dem i fliken Likert-poäng."
       ))
 
       # Filter to selected groups, keeping matching score values by row index
@@ -242,7 +242,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         levels = c(input$selected_group2, input$selected_group1),
         labels = c("2", "1")
       )
-      req(nrow(summary_data) >= 2, "Could not find both groups in data.")
+      req(nrow(summary_data) >= 2, "Kunde inte hitta båda grupperna i data.")
       
       # Create color and shape mapping
       summary_data$group_label <- as.character(summary_data[[group_col_name]])

@@ -2,8 +2,8 @@ mod_likert_ui <- function(id) {
   ns <- NS(id)
 
   tagList(
-    h5("Likert Score Computation"),
-    helpText("Click column names in the preview to include/exclude them from the score calculation."),
+    h5("Beräkning av Likert-poäng"),
+    helpText("Klicka på kolumnnamn i förhandsgranskningen för att inkludera/exkludera dem från poängberäkningen."),
     tags$style(HTML(
       paste(
         ".likert-preview-table { width: 100%; border-collapse: collapse; }",
@@ -15,9 +15,9 @@ mod_likert_ui <- function(id) {
       )
     )),
     uiOutput(ns("likert_preview_ui")),
-    actionButton(ns("compute_scores"), "Compute Scaled Scores"),
-    downloadButton(ns("download_scores"), "Download Result Table (.csv)"),
-    downloadButton(ns("download_scores_xlsx"), "Download Result Table (.xlsx)"),
+    actionButton(ns("compute_scores"), "Beräkna skalad poäng"),
+    downloadButton(ns("download_scores"), "Ladda ner resultattabell (.csv)"),
+    downloadButton(ns("download_scores_xlsx"), "Ladda ner resultattabell (.xlsx)"),
     uiOutput(ns("score_status"))
   )
 }
@@ -40,7 +40,7 @@ mod_likert_server <- function(id, data) {
     output$likert_preview_ui <- renderUI({
       current_data <- data()
       validate(
-        need(ncol(current_data) > 0 && nrow(current_data) > 0, "No data loaded. Please paste or upload data first.")
+        need(ncol(current_data) > 0 && nrow(current_data) > 0, "Ingen data laddad. Klistra in eller ladda upp data först.")
       )
 
       preview <- head(current_data, 20)
@@ -48,7 +48,7 @@ mod_likert_server <- function(id, data) {
       selected_cols <- likert_cols_selected()
 
       if (!is.null(scores())) {
-        preview[["Scaled score"]] <- head(scores(), nrow(preview))
+        preview[["Skalad poäng"]] <- head(scores(), nrow(preview))
       }
 
       header_cells <- lapply(seq_along(data_cols), function(i) {
@@ -68,22 +68,22 @@ mod_likert_server <- function(id, data) {
         )
       })
 
-      if ("Scaled score" %in% names(preview)) {
-        header_cells <- c(header_cells, list(tags$th(class = "likert-score-col", "Scaled score")))
+      if ("Skalad poäng" %in% names(preview)) {
+        header_cells <- c(header_cells, list(tags$th(class = "likert-score-col", "Skalad poäng")))
       }
 
       body_rows <- lapply(seq_len(nrow(preview)), function(row_i) {
         row_cells <- lapply(seq_along(names(preview)), function(col_i) {
           col_nm <- names(preview)[[col_i]]
-          as_display_cell(preview[[col_i]][[row_i]], is_score_col = identical(col_nm, "Scaled score"))
+          as_display_cell(preview[[col_i]][[row_i]], is_score_col = identical(col_nm, "Skalad poäng"))
         })
         tags$tr(row_cells)
       })
 
       tagList(
         div(
-          tags$strong("Selected columns: "),
-          if (length(selected_cols)) paste(selected_cols, collapse = ", ") else "None"
+          tags$strong("Valda kolumner: "),
+          if (length(selected_cols)) paste(selected_cols, collapse = ", ") else "Ingen"
         ),
         br(),
         tags$table(
@@ -160,7 +160,7 @@ mod_likert_server <- function(id, data) {
       req(length(likert_cols_selected()) > 0)
       current_data <- data()
       validate(
-        need(nrow(current_data) > 0, "No data loaded. Please paste or upload data first.")
+        need(nrow(current_data) > 0, "Ingen data laddad. Klistra in eller ladda upp data först.")
       )
       scores(compute_scaled_score(current_data, likert_cols_selected()))
     })
@@ -181,7 +181,7 @@ mod_likert_server <- function(id, data) {
       }
 
       result_df <- current_data
-      result_df[["Scaled score"]] <- current_scores
+      result_df[["Skalad poäng"]] <- current_scores
       result_df
     }
 
@@ -203,7 +203,7 @@ mod_likert_server <- function(id, data) {
       content = function(file) {
         result_df <- result_table_for_download()
         validate(
-          need(requireNamespace("writexl", quietly = TRUE), "Package 'writexl' is required for xlsx export.")
+          need(requireNamespace("writexl", quietly = TRUE), "Paketet 'writexl' krävs för xlsx-export.")
         )
 
         writexl::write_xlsx(result_df, path = file)
@@ -218,21 +218,21 @@ mod_likert_server <- function(id, data) {
           div(
             class = "alert alert-warning",
             paste0(
-              "Scaled scores were computed using ",
+              "Skalad poäng beräknades med ",
               n_selected,
-              " selected columns. Exactly 10 columns are recommended."
+              " valda kolumner. Exakt 10 kolumner rekommenderas."
             )
           )
         } else {
           div(
             class = "alert alert-success",
-            "\u2713 Scaled scores computed and shown in the preview table."
+            "\u2713 Skalad poäng beräknad och visad i förhandsgranskningstabellen."
           )
         }
       } else if (!length(likert_cols_selected())) {
         div(
           class = "alert alert-info",
-          "Click one or more preview columns to select them for scoring."
+          "Klicka på en eller flera förhandsgranskningskolumner för att välja dem för beräkning."
         )
       }
     })
