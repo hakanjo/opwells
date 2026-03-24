@@ -5,17 +5,8 @@ mod_data_input_ui <- function(id) {
     helpText(
       "Klistra in data direkt i kalkylbladet nedan eller ladda upp en fil (.xlsx, .csv, .tsv, eller .txt). Om första raden innehåller kolumnnamn kan du redigera eller klistra in dem direkt i bladet."
     ),
-    fileInput(
-      ns("upload_file"),
-      "Ladda upp datafil:",
-      accept = c(".xlsx", ".csv", ".tsv", ".txt")
-    ),
-    selectInput(
-      ns("delimiter"),
-      "Avgränsare",
-      choices = c("Automatisk" = "auto", "Komma (CSV)" = ",", "Tab (TSV)" = "\t", "Semikolon" = ";"),
-      selected = "auto"
-    ),
+    uiOutput(ns("upload_file_ui")),
+    uiOutput(ns("delimiter_ui")),
     checkboxInput(
       ns("first_row_headers"),
       "Första raden innehåller kolumnnamn",
@@ -41,7 +32,7 @@ mod_data_input_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    make_empty_sheet <- function(n_rows = 20, n_cols = 12) {
+    make_empty_sheet <- function(n_rows = 20, n_cols = 18) {
       header_names <- default_column_names(n_cols)
       df <- as.data.frame(
         matrix("", nrow = n_rows, ncol = n_cols),
@@ -120,7 +111,7 @@ mod_data_input_server <- function(id) {
       df
     }
 
-    as_sheet_display <- function(df, min_rows = 20, min_cols = 12, header_row = NULL) {
+    as_sheet_display <- function(df, min_rows = 20, min_cols = 18, header_row = NULL) {
       df <- normalize_colnames(df)
       df <- coerce_sheet_df(df)
 
@@ -175,6 +166,73 @@ mod_data_input_server <- function(id) {
 
       # Return the delimiter with the highest count
       return(names(which.max(counts)))
+    }
+
+    detect_delimiter_from_lines <- function(lines, default = ",") {
+      lines <- lines[!is.na(lines) & nzchar(trimws(lines))]
+
+      if (!length(lines)) {
+        return(default)
+      }
+
+      sample_line <- lines[[1]]
+      counts <- c(
+        "," = lengths(
+          regmatches(sample_line, gregexpr(",", sample_line, fixed = TRUE))
+        ),
+        "\t" = lengths(
+          regmatches(sample_line, gregexpr("\t", sample_line, fixed = TRUE))
+        ),
+        ";" = lengths(
+          regmatches(sample_line, gregexpr(";", sample_line, fixed = TRUE))
+        )
+      )
+
+      if (all(counts == 0)) {
+        return(default)
+      }
+
+      names(which.max(counts))
+    }
+
+    resolve_sheet_delimiter <- function(choice, df, default = "\t") {
+      if (!identical(choice, "auto")) {
+        return(choice)
+      }
+
+      df <- coerce_sheet_df(df)
+      if (!nrow(df) || !ncol(df)) {
+        return(default)
+      }
+
+      row_vectors <- lapply(seq_len(nrow(df)), function(idx) {
+        row_vals <- as.character(df[idx, , drop = TRUE])
+        row_vals[is.na(row_vals)] <- ""
+        row_vals
+      })
+
+      single_cell_lines <- unlist(lapply(row_vectors, function(row_vals) {
+        non_empty <- which(trimws(row_vals) != "")
+        if (length(non_empty) == 1) {
+          return(row_vals[non_empty])
+        }
+        character(0)
+      }), use.names = FALSE)
+
+      detected <- detect_delimiter_from_lines(single_cell_lines, default = default)
+      if (length(single_cell_lines)) {
+        return(detected)
+      }
+
+      has_multi_col_rows <- any(vapply(row_vectors, function(row_vals) {
+        sum(trimws(row_vals) != "") > 1
+      }, logical(1)))
+
+      if (isTRUE(has_multi_col_rows)) {
+        return("\t")
+      }
+
+      default
     }
 
     parse_uploaded_data <- function(file_path, ext, delimiter) {
@@ -269,17 +327,62 @@ mod_data_input_server <- function(id) {
     }
 
     sheet_data <- reactiveVal(make_empty_sheet())
+    uploaded_file <- reactiveVal(NULL)
+    uploaded_sheet_snapshot <- reactiveVal(NULL)
+    sheet_was_edited <- reactiveVal(FALSE)
+    delimiter_choice <- reactiveVal("auto")
+    pasted_applied_delimiter <- reactiveVal("auto")
+    upload_input_nonce <- reactiveVal(0)
 
-    refresh_uploaded_sheet <- function() {
-      req(input$upload_file)
+    output$upload_file_ui <- renderUI({
+      upload_input_nonce()
+      fileInput(
+        ns("upload_file"),
+        "Ladda upp datafil:",
+        accept = c(".xlsx", ".csv", ".tsv", ".txt")
+      )
+    })
 
-      ext <- tolower(tools::file_ext(input$upload_file$name))
+    show_delimiter <- reactive({
+      if (isTRUE(sheet_was_edited())) {
+        return(TRUE)
+      }
+
+      file_info <- uploaded_file()
+      if (is.null(file_info) || is.null(file_info$name)) {
+        return(FALSE)
+      }
+
+      ext <- tolower(tools::file_ext(file_info$name))
+      !identical(ext, "xlsx")
+    })
+
+    output$delimiter_ui <- renderUI({
+      if (!isTRUE(show_delimiter())) {
+        return(NULL)
+      }
+
+      selectInput(
+        ns("delimiter"),
+        "Avgränsare",
+        choices = c("Automatisk" = "auto", "Komma (CSV)" = ",", "Tab (TSV)" = "\t", "Semikolon" = ";"),
+        selected = delimiter_choice()
+      )
+    })
+
+    refresh_uploaded_sheet <- function(update_snapshot = FALSE) {
+      file_info <- uploaded_file()
+      req(file_info)
+
+      ext <- tolower(tools::file_ext(file_info$name))
       validate(
         need(ext %in% c("xlsx", "csv", "tsv", "txt"), "Please upload xlsx, csv, or tsv/txt files.")
       )
 
+      delimiter <- delimiter_choice()
+
       parsed <- tryCatch(
-        parse_uploaded_data(input$upload_file$datapath, ext, input$delimiter),
+        parse_uploaded_data(file_info$datapath, ext, delimiter),
         error = function(e) NULL
       )
 
@@ -288,7 +391,80 @@ mod_data_input_server <- function(id) {
         need(!is.null(parsed$data) && ncol(parsed$data) > 0, "Uploaded file must contain at least one column.")
       )
 
-      sheet_data(as_sheet_display(parsed$data, header_row = parsed$header_row))
+      refreshed_sheet <- as_sheet_display(parsed$data, header_row = parsed$header_row)
+      sheet_data(refreshed_sheet)
+
+      if (isTRUE(update_snapshot)) {
+        uploaded_sheet_snapshot(refreshed_sheet)
+      }
+    }
+
+    reprocess_pasted_sheet <- function(target_choice, source_choice = NULL) {
+      current <- coerce_sheet_df(sheet_data())
+
+      if (!nrow(current) || !ncol(current)) {
+        return()
+      }
+
+      if (is.null(source_choice)) {
+        source_choice <- pasted_applied_delimiter()
+      }
+
+      source_sep <- resolve_sheet_delimiter(source_choice, current)
+      target_sep <- resolve_sheet_delimiter(target_choice, current)
+
+      row_vectors <- lapply(seq_len(nrow(current)), function(idx) {
+        row_vals <- as.character(current[idx, , drop = TRUE])
+        row_vals[is.na(row_vals)] <- ""
+        row_vals
+      })
+
+      single_cell_lines <- unlist(lapply(row_vectors, function(row_vals) {
+        non_empty <- which(trimws(row_vals) != "")
+        if (length(non_empty) == 1) {
+          return(row_vals[non_empty])
+        }
+        character(0)
+      }), use.names = FALSE)
+
+      parsed_rows <- lapply(row_vectors, function(row_vals) {
+        non_empty <- which(trimws(row_vals) != "")
+
+        if (!length(non_empty)) {
+          return(character(0))
+        }
+
+        upto <- max(non_empty)
+        row_text <- paste(row_vals[seq_len(upto)], collapse = source_sep)
+        pieces <- strsplit(row_text, target_sep, fixed = TRUE)[[1]]
+        trimws(pieces)
+      })
+
+      parsed_rows <- parsed_rows[lengths(parsed_rows) > 0]
+      if (!length(parsed_rows)) {
+        return()
+      }
+
+      n_cols <- max(lengths(parsed_rows))
+      raw_df <- as.data.frame(
+        matrix("", nrow = length(parsed_rows), ncol = n_cols),
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+
+      for (idx in seq_along(parsed_rows)) {
+        parts <- parsed_rows[[idx]]
+        raw_df[idx, seq_along(parts)] <- parts
+      }
+
+      header_row <- as.character(raw_df[1, , drop = TRUE])
+      header_row[is.na(header_row)] <- ""
+      body <- if (nrow(raw_df) > 1) raw_df[-1, , drop = FALSE] else raw_df[FALSE, , drop = FALSE]
+      names(body) <- normalize_names(header_row, default_column_names(ncol(raw_df)))
+
+      sheet_data(as_sheet_display(body, header_row = header_row))
+      pasted_applied_delimiter(target_sep)
+      sheet_was_edited(TRUE)
     }
 
     output$sheet_ui <- renderUI({
@@ -303,7 +479,7 @@ mod_data_input_server <- function(id) {
           colHeaders = names(sheet_data()),
           stretchH = "all",
           minRows = 20,
-          minCols = 12,
+          minCols = 18,
           colWidths = 100
         ) |>
           rhandsontable::hot_table(
@@ -319,20 +495,67 @@ mod_data_input_server <- function(id) {
       req(requireNamespace("rhandsontable", quietly = TRUE))
       updated <- rhandsontable::hot_to_r(input$sheet)
       validate(need(!is.null(updated), "Could not read spreadsheet data."))
-      sheet_data(sync_sheet_headers(updated, isTRUE(input$first_row_headers)))
+      synced <- sync_sheet_headers(updated, isTRUE(input$first_row_headers))
+      current <- sheet_data()
+
+      # rHandsontable may emit input updates during normal rendering; only
+      # treat it as an edit when the sheet content actually changes.
+      if (identical(synced, current)) {
+        return()
+      }
+
+      baseline <- uploaded_sheet_snapshot()
+      changed_from_uploaded <-
+        is.null(uploaded_file()) || is.null(baseline) || !identical(synced, baseline)
+
+      if (isTRUE(changed_from_uploaded)) {
+        sheet_was_edited(TRUE)
+      }
+
+      sheet_data(synced)
     }, ignoreNULL = TRUE)
 
     observeEvent(input$upload_file, {
-      refresh_uploaded_sheet()
+      if (is.null(input$upload_file)) {
+        uploaded_file(NULL)
+        uploaded_sheet_snapshot(NULL)
+        return()
+      }
+
+      delimiter_choice("auto")
+      pasted_applied_delimiter("auto")
+      uploaded_file(input$upload_file)
+      sheet_was_edited(FALSE)
+      refresh_uploaded_sheet(update_snapshot = TRUE)
     })
 
     observeEvent(input$delimiter, {
-      req(input$upload_file)
-      refresh_uploaded_sheet()
+      if (is.null(input$delimiter)) {
+        return()
+      }
+
+      previous_choice <- delimiter_choice()
+      delimiter_choice(input$delimiter)
+
+      # If the user has pasted/edited the sheet, delimiter changes should
+      # reprocess the current sheet content rather than reloading the file.
+      if (isTRUE(sheet_was_edited()) || is.null(uploaded_file())) {
+        reprocess_pasted_sheet(delimiter_choice(), source_choice = previous_choice)
+        return()
+      }
+
+      sheet_was_edited(FALSE)
+      refresh_uploaded_sheet(update_snapshot = TRUE)
     }, ignoreInit = TRUE)
 
     observeEvent(input$clear_sheet, {
       sheet_data(make_empty_sheet())
+      uploaded_file(NULL)
+      uploaded_sheet_snapshot(NULL)
+      sheet_was_edited(FALSE)
+      delimiter_choice("auto")
+      pasted_applied_delimiter("auto")
+      upload_input_nonce(upload_input_nonce() + 1)
     })
 
     observeEvent(input$first_row_headers, {

@@ -3,7 +3,7 @@ mod_likert_ui <- function(id) {
 
   tagList(
     h5("Likert Score Computation"),
-    helpText("Click column names in the preview to include/exclude them from the score calculation (max 10 columns)."),
+    helpText("Click column names in the preview to include/exclude them from the score calculation."),
     tags$style(HTML(
       paste(
         ".likert-preview-table { width: 100%; border-collapse: collapse; }",
@@ -118,16 +118,11 @@ mod_likert_server <- function(id, data) {
       selected_after_prune <- intersect(likert_cols_selected(), cols)
 
       if (headers_changed) {
-        auto_cols <- grep("^OPWELLS", cols, value = TRUE, ignore.case = TRUE)
+        auto_cols <- cols[
+          grepl("^OPWELLS", cols, ignore.case = TRUE) |
+          grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE)
+        ]
         selected_after_prune <- unique(c(selected_after_prune, auto_cols))
-
-        if (length(selected_after_prune) > 10) {
-          selected_after_prune <- selected_after_prune[seq_len(10)]
-          showNotification(
-            "More than 10 columns matched current selection rules. Keeping the first 10.",
-            type = "warning"
-          )
-        }
       }
 
       likert_cols_selected(selected_after_prune)
@@ -141,11 +136,6 @@ mod_likert_server <- function(id, data) {
 
           if (col_nm %in% selected) {
             likert_cols_selected(setdiff(selected, col_nm))
-            return()
-          }
-
-          if (length(selected) >= 10) {
-            showNotification("You can select at most 10 Likert columns.", type = "warning")
             return()
           }
 
@@ -170,8 +160,7 @@ mod_likert_server <- function(id, data) {
       req(length(likert_cols_selected()) > 0)
       current_data <- data()
       validate(
-        need(nrow(current_data) > 0, "No data loaded. Please paste or upload data first."),
-        need(length(likert_cols_selected()) <= 10, "Please select at most 10 Likert columns.")
+        need(nrow(current_data) > 0, "No data loaded. Please paste or upload data first.")
       )
       scores(compute_scaled_score(current_data, likert_cols_selected()))
     })
@@ -187,10 +176,6 @@ mod_likert_server <- function(id, data) {
 
       current_scores <- scores()
       if (is.null(current_scores)) {
-        if (length(selected) > 10) {
-          stop("Please select at most 10 Likert columns.", call. = FALSE)
-        }
-
         current_scores <- compute_scaled_score(current_data, selected)
         scores(current_scores)
       }
@@ -229,13 +214,13 @@ mod_likert_server <- function(id, data) {
       if (!is.null(scores())) {
         n_selected <- length(likert_cols_selected())
 
-        if (n_selected < 10) {
+        if (n_selected != 10) {
           div(
             class = "alert alert-warning",
             paste0(
               "Scaled scores were computed using ",
               n_selected,
-              " selected columns. Up to 10 columns are recommended."
+              " selected columns. Exactly 10 columns are recommended."
             )
           )
         } else {
