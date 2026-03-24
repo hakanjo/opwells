@@ -2,12 +2,13 @@ mod_likert_ui <- function(id) {
   ns <- NS(id)
 
   tagList(
-    h5("Beräkning av Likert-poäng"),
+    h5("Beräkning av poäng"),
     helpText("Klicka på kolumnnamn i förhandsgranskningen för att inkludera/exkludera dem från poängberäkningen."),
     tags$style(HTML(
       paste(
         ".likert-preview-table { width: 100%; border-collapse: collapse; }",
         ".likert-preview-table th, .likert-preview-table td { border: 1px solid #ddd; padding: 6px; font-size: 0.9em; }",
+        ".likert-preview-table th { position: sticky; top: 0; background-color: #fff; z-index: 1; }",
         ".likert-col-link { color: #1f5ea8; text-decoration: none; font-weight: 600; }",
         ".likert-col-link:hover { text-decoration: underline; }",
         ".likert-col-link.selected { color: #0b5e2b; }",
@@ -43,12 +44,12 @@ mod_likert_server <- function(id, data) {
         need(ncol(current_data) > 0 && nrow(current_data) > 0, "Ingen data laddad. Klistra in eller ladda upp data först.")
       )
 
-      preview <- head(current_data, 20)
+      preview <- current_data
       data_cols <- names(preview)
       selected_cols <- likert_cols_selected()
 
       if (!is.null(scores())) {
-        preview[["Skalad poäng"]] <- head(scores(), nrow(preview))
+        preview[["Skalad poäng"]] <- scores()
       }
 
       header_cells <- lapply(seq_along(data_cols), function(i) {
@@ -86,10 +87,13 @@ mod_likert_server <- function(id, data) {
           if (length(selected_cols)) paste(selected_cols, collapse = ", ") else "Ingen"
         ),
         br(),
-        tags$table(
-          class = "likert-preview-table",
-          tags$thead(tags$tr(header_cells)),
-          tags$tbody(body_rows)
+        div(
+          style = "overflow-x: auto; max-height: 600px; overflow-y: auto;",
+          tags$table(
+            class = "likert-preview-table",
+            tags$thead(tags$tr(header_cells)),
+            tags$tbody(body_rows)
+          )
         )
       )
     })
@@ -187,7 +191,7 @@ mod_likert_server <- function(id, data) {
 
     output$download_scores <- downloadHandler(
       filename = function() {
-        paste0("likert_scores_", format(Sys.Date(), "%Y-%m-%d"), ".csv")
+        paste0("scores-", format(Sys.Date(), "%Y-%m-%d"), ".csv")
       },
       content = function(file) {
         result_df <- result_table_for_download()
@@ -198,7 +202,7 @@ mod_likert_server <- function(id, data) {
 
     output$download_scores_xlsx <- downloadHandler(
       filename = function() {
-        paste0("likert_scores_", format(Sys.Date(), "%Y-%m-%d"), ".xlsx")
+        paste0("scores-", format(Sys.Date(), "%Y-%m-%d"), ".xlsx")
       },
       content = function(file) {
         result_df <- result_table_for_download()
