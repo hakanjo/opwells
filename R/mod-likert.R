@@ -124,7 +124,8 @@ mod_likert_server <- function(id, data) {
       if (headers_changed) {
         auto_cols <- cols[
           grepl("^OPWELLS", cols, ignore.case = TRUE) |
-          grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE)
+          grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE) | 
+          grepl("Q(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE)
         ]
         selected_after_prune <- unique(c(selected_after_prune, auto_cols))
       }
