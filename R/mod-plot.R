@@ -148,9 +148,9 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         x = NULL,
         y = NULL,
         caption = if (exploded) {
-          "Rådatapunkter (jitter). Klicka på en punkt för att återgå till medelvärden."
+          NULL
         } else {
-          "Medelvärde med det centrala ⅔-intervallet. Klicka på en medelpunkt för rådatavy."
+          "Medelvärde med det centrala ⅔-intervallet."
         }
       ) +
       annotate(
