@@ -1,2 +1,5 @@
 # VS Code temporary files
 .vdoc*
+
+# Shiny deployment files
+rsconnect/*

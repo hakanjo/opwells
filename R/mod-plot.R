@@ -71,8 +71,8 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       ggplot(plot_data, aes(x = mean, y = group_position)) +
       geom_segment(
         aes(
-          x = mean - sd,
-          xend = mean + sd,
+          x = q_1_6,
+          xend = q_5_6,
           y = group_position,
           yend = group_position
         ),
@@ -115,7 +115,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       labs(
         x = NULL,
         y = NULL,
-        caption = "Medelvärde ±1 standardavvikelse."
+        caption = "Medelvärde med det centrala ⅔-intervallet."
       ) +
       annotate(
         "text", label = "Lägst välbefinnande",
@@ -221,13 +221,15 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         x <- split_scores[[g]]
         x_clean <- x[!is.na(x)]
         if (!length(x_clean)) {
-          return(data.frame(group = g, mean = NA_real_, sd = NA_real_, n = 0L, stringsAsFactors = FALSE))
+          return(data.frame(group = g, mean = NA_real_, sd = NA_real_, q_1_6 = NA_real_, q_5_6 = NA_real_, n = 0L, stringsAsFactors = FALSE))
         }
 
         data.frame(
           group = g,
           mean = mean(x_clean),
           sd = stats::sd(x_clean),
+          q_1_6 = quantile(x_clean, probs = 1/6, na.rm = TRUE),
+          q_5_6 = quantile(x_clean, probs = 5/6, na.rm = TRUE),
           n = length(x_clean),
           stringsAsFactors = FALSE
         )
@@ -252,8 +254,8 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       ggplot(summary_data, aes(x = mean, y = group_position)) +
       geom_segment(
         aes(
-          x = mean - sd,
-          xend = mean + sd,
+          x = q_1_6,
+          xend = q_5_6,
           y = group_position,
           yend = group_position
         ),
@@ -301,7 +303,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       labs(
         x = NULL,
         y = NULL,
-        caption = "Medelvärde ±1 standardavvikelse."
+        caption = "Medelvärde med det centrala ⅔-intervallet."
       ) +
       annotate(
         "text", label = "Lägst välbefinnande",
