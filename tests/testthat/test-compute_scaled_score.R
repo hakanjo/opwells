@@ -40,3 +40,41 @@ test_that("compute_scaled_score coerces non-numeric values and handles partial N
   expect_equal(result[2], app_env$scale(2), tolerance = 1e-6)
   expect_equal(result[3], app_env$scale(3), tolerance = 1e-6)
 })
+
+test_that("compute_scaled_score maps Swedish Likert labels to numeric values", {
+  df <- data.frame(
+    Q1 = c("Aldrig", " Sällan ", "IBLAND", "ofta", "Alltid"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- app_env$compute_scaled_score(df, "Q1")
+
+  expect_equal(result, vapply(0:4, app_env$scale, numeric(1)), tolerance = 1e-6)
+})
+
+test_that("compute_scaled_score handles mixed Swedish labels and numeric strings", {
+  df <- data.frame(
+    Q1 = c("Aldrig", "Ofta", "2"),
+    Q2 = c("4", " 1 ", "Alltid"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- app_env$compute_scaled_score(df, c("Q1", "Q2"))
+
+  expect_equal(result[1], app_env$scale(4), tolerance = 1e-6)
+  expect_equal(result[2], app_env$scale(4), tolerance = 1e-6)
+  expect_equal(result[3], app_env$scale(6), tolerance = 1e-6)
+})
+
+test_that("compute_scaled_score ignores unknown Swedish-like labels as NA", {
+  df <- data.frame(
+    Q1 = c("Kanske", "Ofta"),
+    Q2 = c("Alltid", "Vet ej"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- app_env$compute_scaled_score(df, c("Q1", "Q2"))
+
+  expect_equal(result[1], app_env$scale(4), tolerance = 1e-6)
+  expect_equal(result[2], app_env$scale(3), tolerance = 1e-6)
+})

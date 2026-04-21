@@ -1,3 +1,22 @@
+convert_likert_value <- function(x) {
+  value_chr <- trimws(as.character(x))
+
+  swedish_map <- c(
+    "aldrig" = "0",
+    "sällan" = "1",
+    "ibland" = "2",
+    "ofta" = "3",
+    "alltid" = "4"
+  )
+
+  mapped_values <- unname(swedish_map[tolower(value_chr)])
+  matched <- !is.na(mapped_values)
+
+  value_chr[matched] <- mapped_values[matched]
+
+  suppressWarnings(as.numeric(value_chr))
+}
+
 compute_scaled_score <- function(df, likert_cols = NULL) {
   n <- nrow(df)
 
@@ -12,9 +31,10 @@ compute_scaled_score <- function(df, likert_cols = NULL) {
 
   likert_data <- df[, likert_cols, drop = FALSE]
 
-  likert_numeric <- data.frame(lapply(likert_data, function(x) {
-    suppressWarnings(as.numeric(x))
-  }), stringsAsFactors = FALSE)
+  likert_numeric <- data.frame(
+    lapply(likert_data, convert_likert_value),
+    stringsAsFactors = FALSE
+  )
 
   raw_sums <- rowSums(likert_numeric, na.rm = TRUE)
 
