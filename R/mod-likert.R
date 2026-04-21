@@ -23,7 +23,7 @@ mod_likert_ui <- function(id) {
   )
 }
 
-mod_likert_server <- function(id, data) {
+mod_likert_server <- function(id, data, active_tab = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -38,11 +38,46 @@ mod_likert_server <- function(id, data) {
       tags$td(class = td_class, val)
     }
 
+    has_likert_data <- reactive({
+      current_data <- data()
+      is.data.frame(current_data) && ncol(current_data) > 0 && nrow(current_data) > 0
+    })
+
+    observeEvent(active_tab(), {
+      if (!identical(active_tab(), "likert")) {
+        return()
+      }
+
+      notification_id <- ns("likert_selection_prompt")
+
+      if (!has_likert_data()) {
+        showNotification(
+          "Ingen användardata laddad. Ladda data i fliken Ladda data för att beräkna poäng.",
+          type = "warning",
+          duration = 3,
+          id = notification_id
+        )
+        return()
+      }
+
+      if (is.null(scores())) {
+        showNotification(
+          "Klicka på en eller flera förhandsgranskningskolumner för att välja dem för beräkning.",
+          type = "message",
+          duration = 3,
+          id = notification_id
+        )
+        return()
+      }
+
+      removeNotification(notification_id)
+    }, ignoreInit = TRUE)
+
     output$likert_preview_ui <- renderUI({
       current_data <- data()
-      validate(
-        need(ncol(current_data) > 0 && nrow(current_data) > 0, "Ingen data laddad. Klistra in eller ladda upp data först.")
-      )
+      if (!has_likert_data()) {
+        return(NULL)
+      }
 
       preview <- current_data
       data_cols <- names(preview)
@@ -164,10 +199,33 @@ mod_likert_server <- function(id, data) {
     observeEvent(input$compute_scores, {
       req(length(likert_cols_selected()) > 0)
       current_data <- data()
-      validate(
-        need(nrow(current_data) > 0, "Ingen data laddad. Klistra in eller ladda upp data först.")
-      )
+      if (!has_likert_data()) {
+        showNotification(
+          "Ingen data laddad. Klistra in eller ladda upp data först.",
+          type = "warning",
+          duration = 3,
+          id = ns("likert_no_data")
+        )
+        return()
+      }
       scores(compute_scaled_score(current_data, likert_cols_selected()))
+
+      n_selected <- length(likert_cols_selected())
+      warning_notification_id <- ns("score_status_warning")
+      if (n_selected != 10) {
+        showNotification(
+          paste0(
+            "Skalad poäng beräknades med ",
+            n_selected,
+            " valda kolumner. Exakt 10 kolumner rekommenderas."
+          ),
+          type = "warning",
+          duration = 5,
+          id = warning_notification_id
+        )
+      } else {
+        removeNotification(warning_notification_id)
+      }
     })
 
     result_table_for_download <- function() {
@@ -215,26 +273,24 @@ mod_likert_server <- function(id, data) {
       }
     )
 
-    output$score_status <- renderUI({
-      if (!is.null(scores())) {
-        n_selected <- length(likert_cols_selected())
+    observeEvent(list(scores(), length(likert_cols_selected())), {
+      notification_id <- ns("score_status_success")
 
-        if (n_selected != 10) {
-          div(
-            class = "alert alert-warning",
-            paste0(
-              "Skalad poäng beräknades med ",
-              n_selected,
-              " valda kolumner. Exakt 10 kolumner rekommenderas."
-            )
-          )
-        } else {
-          div(
-            class = "alert alert-success",
-            "\u2713 Skalad poäng beräknad och visad i förhandsgranskningstabellen."
-          )
-        }
-      } else if (!length(likert_cols_selected())) {
+      if (is.null(scores()) || length(likert_cols_selected()) != 10) {
+        removeNotification(notification_id)
+        return()
+      }
+
+      showNotification(
+        "\u2713 Skalad poäng beräknad och visad i förhandsgranskningstabellen.",
+        type = "message",
+        duration = 3,
+        id = notification_id
+      )
+    }, ignoreInit = TRUE)
+
+    output$score_status <- renderUI({
+      if (has_likert_data() && !length(likert_cols_selected())) {
         div(
           class = "alert alert-info",
           "Klicka på en eller flera förhandsgranskningskolumner för att välja dem för beräkning."

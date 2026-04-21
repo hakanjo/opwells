@@ -4,8 +4,10 @@ mod_plot_ui <- function(id) {
   tagList(
     br(),
     tabsetPanel(
+      id = ns("plot_tab"),
       tabPanel(
         "Referensdata",
+        value = "ref",
         br(),
         fluidRow(
           column(
@@ -18,6 +20,7 @@ mod_plot_ui <- function(id) {
       ),
       tabPanel(
         "Användardata",
+        value = "user",
         br(),
         fluidRow(
           column(
@@ -130,7 +133,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         stroke = 1.5
       ) +
       geom_text(
-        aes(label = paste0(group_label, "\n", round(mean, 0), ifelse(!is.na(sd), paste0(" ± ", round(sd, 0)), ""))),
+        aes(label = paste0(group_label, "\n", round(mean, 0), " (", round(q_1_6, 0), "–", round(q_5_6, 0), ")")),
         vjust = -0.5,
         size = 5,
         color = "black",
@@ -434,10 +437,59 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       user_selected_groups(c(current, next_group[1]))
     }, ignoreInit = TRUE)
 
+    observeEvent(input$plot_tab, {
+      if (!identical(input$plot_tab, "user")) {
+        return()
+      }
+
+      notification_id <- session$ns("user_plot_status")
+
+      if (is.null(data)) {
+        showNotification(
+          "Ingen användardata laddad. Ladda data i fliken Ladda data för att visa ett diagram.",
+          type = "warning",
+          duration = 3,
+          id = notification_id
+        )
+        return()
+      }
+
+      user_df <- data()
+      if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
+        showNotification(
+          "Ingen användardata laddad. Ladda data i fliken Ladda data för att visa ett diagram.",
+          type = "warning",
+          duration = 3,
+          id = notification_id
+        )
+        return()
+      }
+
+      if (is.null(scores) || is.null(scores())) {
+        showNotification(
+          "Ingen skalad poäng beräknad. Beräkna dem i fliken Likert-poäng.",
+          type = "warning",
+          duration = 3,
+          id = notification_id
+        )
+        return()
+      }
+
+      removeNotification(notification_id)
+    }, ignoreInit = TRUE)
+
     output$user_plot <- renderPlot({
       if (is.null(data)) return(NULL)
       user_df <- data()
       selected <- user_selected_groups()
+
+      if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
+        return(NULL)
+      }
+
+      if (is.null(scores) || is.null(scores())) {
+        return(NULL)
+      }
 
       req(
         is.data.frame(user_df),
@@ -446,10 +498,6 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         nzchar(input$group_col),
         length(selected) >= 1
       )
-      validate(need(
-        !is.null(scores) && !is.null(scores()),
-        "Ingen skalad poäng beräknad. Beräkna dem i fliken Likert-poäng."
-      ))
 
       # Filter to selected groups, keeping matching score values by row index
       row_idx <- as.character(user_df[[input$group_col]]) %in% selected

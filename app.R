@@ -14,16 +14,20 @@ for (file in file_list) { source(file) }
 ui <- fluidPage(
   titlePanel("Äldres välbefinnande"),
   tabsetPanel(
+    id = "main_tab",
     tabPanel(
       "Ladda data",
+      value = "data_input",
       mod_data_input_ui("data_input")
     ),
     tabPanel(
       "Poäng",
+      value = "likert",
       mod_likert_ui("likert")
     ),
     tabPanel(
       "Plotta data",
+      value = "plot",
       mod_plot_ui("plot")
     )
   )
@@ -31,7 +35,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   data_r <- mod_data_input_server("data_input")
-  scores_r <- mod_likert_server("likert", data = data_r)
+  scores_r <- mod_likert_server("likert", data = data_r, active_tab = reactive(input$main_tab))
   mod_plot_server("plot", data = data_r, scores = scores_r)
 }
 
