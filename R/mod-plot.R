@@ -39,6 +39,19 @@ mod_plot_ui <- function(id) {
 mod_plot_server <- function(id, data = NULL, scores = NULL) {
   moduleServer(id, function(input, output, session) {
 
+    current_scores <- reactive({
+      if (is.null(scores)) {
+        return(NULL)
+      }
+
+      value <- scores()
+      if (is.list(value) && "scaled_scores" %in% names(value)) {
+        return(value$scaled_scores)
+      }
+
+      value
+    })
+
     normalize_group_selection <- function(selected, groups, target_n = 2L) {
       groups <- as.character(groups)
       groups <- groups[!is.na(groups) & nzchar(groups)]
@@ -542,7 +555,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         return(NULL)
       }
 
-      if (is.null(scores) || is.null(scores())) {
+      if (is.null(current_scores())) {
         return(NULL)
       }
 
@@ -557,7 +570,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       plot_data <- user_df[row_idx, , drop = FALSE]
       req(nrow(plot_data) > 0)
 
-      plot_scores <- suppressWarnings(as.numeric(scores()[row_idx]))
+      plot_scores <- suppressWarnings(as.numeric(current_scores()[row_idx]))
       group_col_name <- input$group_col
       grp_vals <- as.character(plot_data[[group_col_name]])
       split_scores <- split(plot_scores, grp_vals)
@@ -648,7 +661,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
         return()
       }
 
-      if (is.null(scores) || is.null(scores())) {
+      if (is.null(current_scores())) {
         showNotification(
           "Ingen skalad poäng beräknad. Beräkna dem i fliken Likert-poäng.",
           type = "warning",

@@ -29,14 +29,20 @@ ui <- fluidPage(
       "Plotta data",
       value = "plot",
       mod_plot_ui("plot")
+    ),
+    tabPanel(
+      "Statistik",
+      value = "statistics",
+      mod_statistics_ui("statistics")
     )
   )
 )
 
 server <- function(input, output, session) {
   data_r <- mod_data_input_server("data_input")
-  scores_r <- mod_likert_server("likert", data = data_r, active_tab = reactive(input$main_tab))
-  mod_plot_server("plot", data = data_r, scores = scores_r)
+  likert_state_r <- mod_likert_server("likert", data = data_r, active_tab = reactive(input$main_tab))
+  mod_statistics_server("statistics", data = data_r, likert_state = likert_state_r, active_tab = reactive(input$main_tab))
+  mod_plot_server("plot", data = data_r, scores = likert_state_r)
 }
 
 shinyApp(ui = ui, server = server)

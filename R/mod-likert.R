@@ -30,6 +30,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
     scores <- reactiveVal(NULL)
     likert_cols_selected <- reactiveVal(character(0))
     previous_col_names <- reactiveVal(NULL)
+    skip_next_selection_reset <- reactiveVal(FALSE)
     col_click_observers <- list()
 
     as_display_cell <- function(x, is_score_col = FALSE) {
@@ -42,6 +43,42 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       current_data <- data()
       is.data.frame(current_data) && ncol(current_data) > 0 && nrow(current_data) > 0
     })
+
+    numeric_items <- reactive({
+      current_data <- data()
+      selected_cols <- likert_cols_selected()
+
+      if (!is.data.frame(current_data) || nrow(current_data) == 0 || !length(selected_cols)) {
+        return(data.frame())
+      }
+
+      get_likert_numeric_data(current_data, selected_cols)
+    })
+
+    compute_scores_with_feedback <- function(current_data, selected_cols) {
+      if (!is.data.frame(current_data) || nrow(current_data) == 0 || !length(selected_cols)) {
+        return()
+      }
+
+      scores(compute_scaled_score(current_data, selected_cols))
+
+      n_selected <- length(selected_cols)
+      warning_notification_id <- ns("score_status_warning")
+      if (n_selected != 10) {
+        showNotification(
+          paste0(
+            "Skalad poäng beräknades med ",
+            n_selected,
+            " valda kolumner. Exakt 10 kolumner rekommenderas."
+          ),
+          type = "warning",
+          duration = 5,
+          id = warning_notification_id
+        )
+      } else {
+        removeNotification(warning_notification_id)
+      }
+    }
 
     observeEvent(active_tab(), {
       if (!identical(active_tab(), "likert")) {
@@ -152,6 +189,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
 
       old_cols <- previous_col_names()
       headers_changed <- is.null(old_cols) || !identical(old_cols, cols)
+      auto_selected <- FALSE
 
       # Keep only still-existing columns selected after upload/edit changes.
       selected_after_prune <- intersect(likert_cols_selected(), cols)
@@ -162,7 +200,12 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
           grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE) | 
           grepl("Q(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE)
         ]
+        auto_selected <- length(auto_cols) > 0
         selected_after_prune <- unique(c(selected_after_prune, auto_cols))
+      }
+
+      if (!identical(selected_after_prune, likert_cols_selected())) {
+        skip_next_selection_reset(auto_selected && length(selected_after_prune) > 0)
       }
 
       likert_cols_selected(selected_after_prune)
@@ -184,7 +227,9 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       })
 
       # If scores were already computed, keep them in sync with edited/uploaded data.
-      if (had_scores && length(selected_cols) > 0) {
+      if (auto_selected && length(selected_cols) > 0) {
+        compute_scores_with_feedback(current_data, selected_cols)
+      } else if (had_scores && length(selected_cols) > 0) {
         scores(compute_scaled_score(current_data, selected_cols))
       } else {
         scores(NULL)
@@ -193,6 +238,11 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
 
     # Reset scores when selection changes to avoid stale values in preview.
     observeEvent(likert_cols_selected(), {
+      if (isTRUE(skip_next_selection_reset())) {
+        skip_next_selection_reset(FALSE)
+        return()
+      }
+
       scores(NULL)
     }, ignoreInit = TRUE)
 
@@ -208,24 +258,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
         )
         return()
       }
-      scores(compute_scaled_score(current_data, likert_cols_selected()))
-
-      n_selected <- length(likert_cols_selected())
-      warning_notification_id <- ns("score_status_warning")
-      if (n_selected != 10) {
-        showNotification(
-          paste0(
-            "Skalad poäng beräknades med ",
-            n_selected,
-            " valda kolumner. Exakt 10 kolumner rekommenderas."
-          ),
-          type = "warning",
-          duration = 5,
-          id = warning_notification_id
-        )
-      } else {
-        removeNotification(warning_notification_id)
-      }
+      compute_scores_with_feedback(current_data, likert_cols_selected())
     })
 
     result_table_for_download <- function() {
@@ -298,6 +331,12 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       }
     })
 
-    scores
+    reactive({
+      list(
+        scaled_scores = scores(),
+        selected_columns = likert_cols_selected(),
+        numeric_items = numeric_items()
+      )
+    })
   })
 }

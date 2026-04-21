@@ -14,5 +14,5 @@ scale <- function(score) {
     )
   )
 
-  return(scaled_sumscores$scaled_score[which.min(abs(scaled_sumscores$score - score))])
+  return(unname(scaled_sumscores$scaled_score[which.min(abs(scaled_sumscores$score - score))]))
 }
