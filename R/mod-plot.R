@@ -160,11 +160,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       labs(
         x = NULL,
         y = NULL,
-        caption = if (exploded) {
-          NULL
-        } else {
-          "Medelvärde med det centrala ⅔-intervallet."
-        }
+        caption = "Medelvärde med det centrala ⅔-intervallet."
       ) +
       annotate(
         "text", label = "Lägst välbefinnande",
@@ -197,17 +193,56 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
             raw_plot$group_position <- factor(raw_plot$group_label, levels = rev(present_groups))
             raw_plot$point_color <- unname(color_map[raw_plot$group_label])
             p <- p +
-              geom_jitter(
+              geom_point(
                 data = raw_plot,
                 aes(x = score_value, y = group_position, fill = point_color),
-                width = 0,
-                height = 0.15,
+                position = position_nudge(
+                  y = runif(nrow(raw_plot), -0.5, -0.05)
+                ),
                 size = 3,
-                alpha = 0.7,
+                alpha = 0.5,
                 shape = 21,
                 stroke = 0.5
               ) +
-              scale_fill_identity()
+              geom_segment(
+                aes(
+                  x = q_1_6,
+                  xend = q_5_6,
+                  y = group_position,
+                  yend = group_position
+                ),
+                color = "black",
+                linewidth = 1,
+                arrow = arrow(
+                  ends = "both",
+                  type = "closed",
+                  length = unit(0.25, "cm")
+                )
+              ) +
+              geom_segment(
+                aes(
+                  x = mean,
+                  xend = mean,
+                  y = group_position,
+                  yend = 0
+                ),
+                color = "grey70",
+                linewidth = 0.5
+              ) +
+              geom_point(
+                aes(fill = point_color, shape = point_shape),
+                size = 5,
+                stroke = 1.5
+              ) +
+              geom_text(
+                aes(label = paste0(group_label, "\n", round(mean, 0), " (", round(q_1_6, 0), "–", round(q_5_6, 0), ")")),
+                vjust = -0.5,
+                size = 5,
+                color = "black",
+                fontface = "bold"
+              ) +
+              scale_fill_identity() +
+              scale_shape_identity()
           }
         }
       } else {
