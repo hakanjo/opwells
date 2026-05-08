@@ -6,22 +6,11 @@ mod_plot_ui <- function(id) {
     tabsetPanel(
       id = ns("plot_tab"),
       tabPanel(
-        "Referensdata",
-        value = "ref",
-        br(),
-        fluidRow(
-          column(
-            width = 4,
-            uiOutput(ns("ref_groups_ui")),
-            actionButton(ns("add_ref_group"), "Lägg till grupp")
-          )
-        ),
-        plotOutput(ns("ref_plot"), height = "500px", click = ns("ref_plot_click"))
-      ),
-      tabPanel(
         "Användardata",
         value = "user",
         br(),
+        p("Symbolerna visar medelvärden för välbefinnande. Pilarna omkring dessa visar spannet där två tredjedelar av de svarandes välbefinnande befinner sig."),
+        p("Om du klickar på bilden får du upp punkter med alla svarandes välbefinnande per kategori. Du kan hålla pekaren över en punk och få information om vilken rad i din datafil den motsvarar."),
         fluidRow(
           column(
             width = 4,
@@ -31,6 +20,21 @@ mod_plot_ui <- function(id) {
           )
         ),
         plotOutput(ns("user_plot"), height = "500px", click = ns("user_plot_click"))
+      ),
+      tabPanel(
+        "Referensdata",
+        value = "ref",
+        br(),
+        p("Symbolerna visar medelvärden för välbefinnande. Pilarna omkring dessa visar spannet där två tredjedelar av de svarandes välbefinnande befinner sig."),
+        p("Om du klickar på bilden får du upp punkter med alla svarandes välbefinnande per kategori. Du kan hålla pekaren över en punk och få information om vilken rad i din datafil den motsvarar."),
+        fluidRow(
+          column(
+            width = 4,
+            uiOutput(ns("ref_groups_ui")),
+            actionButton(ns("add_ref_group"), "Lägg till grupp")
+          )
+        ),
+        plotOutput(ns("ref_plot"), height = "500px", click = ns("ref_plot_click"))
       )
     )
   )
@@ -159,8 +163,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       ) +
       labs(
         x = NULL,
-        y = NULL,
-        caption = "Medelvärde med det centrala ⅔-intervallet."
+        y = NULL
       ) +
       annotate(
         "text", label = "Lägst välbefinnande",
@@ -698,7 +701,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
 
       if (is.null(current_scores())) {
         showNotification(
-          "Ingen skalad poäng beräknad. Beräkna dem i fliken Likert-poäng.",
+          "Ingen skalad poäng beräknad.",
           type = "warning",
           duration = 3,
           id = notification_id

@@ -53,9 +53,12 @@ compute_scaled_score <- function(df, likert_cols = NULL) {
   likert_numeric <- get_likert_numeric_data(df, likert_cols)
 
   raw_sums <- rowSums(likert_numeric, na.rm = TRUE)
-  # Raw sums should be 0-40 (10 questions * 4 points max)
-  unname(vapply(raw_sums, function(score) {
-    if (is.na(score)) return(NA_real_)
-    scale(score)
+  n_valid <- rowSums(!is.na(likert_numeric))
+  # Adjust for missing items: proportionally scale to the full 0-40 range so
+  # that, e.g., 16/20 (5 valid items) equals 32/40 (10 valid items) = 80%.
+  unname(vapply(seq_len(nrow(df)), function(i) {
+    if (n_valid[i] == 0L) return(NA_real_)
+    adjusted_score <- raw_sums[i] / (n_valid[i] * 4) * 40
+    scale(adjusted_score)
   }, numeric(1)))
 }

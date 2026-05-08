@@ -17,8 +17,6 @@ mod_likert_ui <- function(id) {
     )),
     uiOutput(ns("likert_preview_ui")),
     actionButton(ns("compute_scores"), "Beräkna skalad poäng"),
-    downloadButton(ns("download_scores"), "Ladda ner resultattabell (.csv)"),
-    downloadButton(ns("download_scores_xlsx"), "Ladda ner resultattabell (.xlsx)"),
     uiOutput(ns("score_status"))
   )
 }
@@ -260,51 +258,6 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       }
       compute_scores_with_feedback(current_data, likert_cols_selected())
     })
-
-    result_table_for_download <- function() {
-      current_data <- data()
-      req(nrow(current_data) > 0)
-
-      selected <- likert_cols_selected()
-      if (!length(selected)) {
-        return(current_data)
-      }
-
-      current_scores <- scores()
-      if (is.null(current_scores)) {
-        current_scores <- compute_scaled_score(current_data, selected)
-        scores(current_scores)
-      }
-
-      result_df <- current_data
-      result_df[["Skalad poäng"]] <- current_scores
-      result_df
-    }
-
-    output$download_scores <- downloadHandler(
-      filename = function() {
-        paste0("scores-", format(Sys.Date(), "%Y-%m-%d"), ".csv")
-      },
-      content = function(file) {
-        result_df <- result_table_for_download()
-
-        utils::write.csv(result_df, file = file, row.names = FALSE, na = "")
-      }
-    )
-
-    output$download_scores_xlsx <- downloadHandler(
-      filename = function() {
-        paste0("scores-", format(Sys.Date(), "%Y-%m-%d"), ".xlsx")
-      },
-      content = function(file) {
-        result_df <- result_table_for_download()
-        validate(
-          need(requireNamespace("writexl", quietly = TRUE), "Paketet 'writexl' krävs för xlsx-export.")
-        )
-
-        writexl::write_xlsx(result_df, path = file)
-      }
-    )
 
     observeEvent(list(scores(), length(likert_cols_selected())), {
       notification_id <- ns("score_status_success")

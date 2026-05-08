@@ -4,7 +4,7 @@ mod_statistics_ui <- function(id) {
   tagList(
     br(),
     h5("Statistik för valda Likert-frågor"),
-    helpText("Fliken använder samma valda frågor som i Poäng. Skalad poäng sammanfattas när den har beräknats."),
+    helpText("Fliken anv\u00e4nder de kolumner som automatiskt valts vid uppladdning. Skalad po\u00e4ng sammanfattas n\u00e4r den har ber\u00e4knats."),
     tabsetPanel(
       id = ns("statistics_subtab"),
       tabPanel(

@@ -1,6 +1,6 @@
 library(shiny)
 
-make_mod_likert_env <- function(notification_log) {
+make_mod_data_input_env <- function() {
   mod_env <- new.env(parent = globalenv())
 
   file_list <- list.files(
@@ -14,19 +14,11 @@ make_mod_likert_env <- function(notification_log) {
     source(file, local = mod_env)
   }
 
-  mod_env$showNotification <- function(ui, ...) {
-    notification_log$messages <- c(notification_log$messages, as.character(ui))
-    invisible(NULL)
-  }
-
   mod_env
 }
 
-test_that("likert module auto-select computes scaled scores and warns when selected columns are not 10", {
-  notification_log <- new.env(parent = emptyenv())
-  notification_log$messages <- character(0)
-
-  mod_env <- make_mod_likert_env(notification_log)
+test_that("data_input module auto-selects matching columns and computes scaled scores", {
+  mod_env <- make_mod_data_input_env()
 
   user_df <- data.frame(
     Q1 = c("1", "2", "3"),
@@ -35,19 +27,26 @@ test_that("likert module auto-select computes scaled scores and warns when selec
     stringsAsFactors = FALSE
   )
 
+  tmp <- tempfile(fileext = ".csv")
+  on.exit(unlink(tmp), add = TRUE)
+  utils::write.csv(user_df, tmp, row.names = FALSE)
+
   testServer(
-    mod_env$mod_likert_server,
-    args = list(
-      data = reactive(user_df),
-      active_tab = reactive("likert")
-    ),
+    mod_env$mod_data_input_server,
     {
+      session$setInputs(upload_file = list(
+        name = "test.csv",
+        size = file.size(tmp),
+        type = "text/csv",
+        datapath = tmp
+      ))
       session$flushReact()
 
-      preview_html <- paste(as.character(output$likert_preview_ui), collapse = "")
-      expect_true(grepl("Skalad poäng", preview_html, fixed = TRUE))
+      result <- session$returned
+      state <- result$likert_state()
+
+      expect_false(is.null(state$scaled_scores))
+      expect_equal(sort(state$selected_columns), c("Q1", "Q2"))
     }
   )
-
-  expect_true(any(grepl("Exakt 10 kolumner rekommenderas.", notification_log$messages, fixed = TRUE)))
 })

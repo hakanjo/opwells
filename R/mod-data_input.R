@@ -3,45 +3,28 @@ mod_data_input_ui <- function(id) {
 
   tagList(
     helpText(
-      "Klistra in data direkt i kalkylbladet nedan eller ladda upp en fil (.xlsx, .csv, .tsv, eller .txt). Om första raden innehåller kolumnnamn kan du redigera eller klistra in dem direkt i bladet."
+      "Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).",
+      tags$br(), tags$br(),
+      "Din fil f\u00f6r uppladdning ska inneh\u00e5lla varsin kolumn f\u00f6r respektive OPWELLS-fr\u00e5ga som ben\u00e4mns OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2 etc. D\u00e4rtill kan du ladda upp ytterligare variabler f\u00f6r de gruppj\u00e4mf\u00f6relser du vill g\u00f6ra, exempelvis tidpunkt, k\u00f6n, \u00e5ldersgrupp.",
+      tags$br(), tags$br(),
+      "Anv\u00e4nd g\u00e4rna denna mall f\u00f6r ditt data ",
+      downloadLink(ns("download_template"), "l\u00e4nk .xlsx"),
+      tags$br(), tags$br(),
+      "T\u00e4nk p\u00e5 att inte ladda upp personuppgifter."
     ),
-    uiOutput(ns("upload_file_ui")),
+    fileInput(
+      ns("upload_file"),
+      "Ladda upp datafil:",
+      accept = c(".xlsx", ".csv", ".tsv", ".txt")
+    ),
     uiOutput(ns("delimiter_ui")),
-    checkboxInput(
-      ns("first_row_headers"),
-      "Första raden innehåller kolumnnamn",
-      value = TRUE
-    ),
-    actionButton(ns("clear_sheet"), "Rensa kalkylblad"),
-    uiOutput(ns("sheet_ui"))
-  )
-}
-
-mod_data_preview_ui <- function(id) {
-  ns <- NS(id)
-
-  tagList(
-    helpText(
-      "Förhandsgranska de första raderna av din data här."
-    ),
-    tableOutput(ns("preview"))
+    uiOutput(ns("upload_status"))
   )
 }
 
 mod_data_input_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-
-    make_empty_sheet <- function(n_rows = 20, n_cols = 18) {
-      header_names <- default_column_names(n_cols)
-      df <- as.data.frame(
-        matrix("", nrow = n_rows, ncol = n_cols),
-        stringsAsFactors = FALSE,
-        check.names = FALSE
-      )
-      names(df) <- header_names
-      return(df)
-    }
 
     default_column_names <- function(n_cols) {
       vapply(seq_len(n_cols), function(idx) {
@@ -71,12 +54,7 @@ mod_data_input_server <- function(id) {
       make.unique(nms)
     }
 
-    normalize_colnames <- function(df) {
-      names(df) <- normalize_names(names(df), default_column_names(ncol(df)))
-      return(df)
-    }
-
-    coerce_sheet_df <- function(df) {
+    coerce_to_character_df <- function(df) {
       df <- as.data.frame(df, stringsAsFactors = FALSE, check.names = FALSE)
       if (!ncol(df)) {
         return(df)
@@ -91,148 +69,20 @@ mod_data_input_server <- function(id) {
       df
     }
 
-    sync_sheet_headers <- function(df, use_first_row_headers = TRUE) {
-      df <- coerce_sheet_df(df)
-
-      if (!ncol(df)) {
-        return(df)
-      }
-
-      if (use_first_row_headers && nrow(df) > 0) {
-        header_values <- normalize_names(
-          as.character(df[1, , drop = TRUE]),
-          default_column_names(ncol(df))
-        )
-        names(df) <- header_values
-        return(df)
-      }
-
-      names(df) <- default_column_names(ncol(df))
-      df
-    }
-
-    as_sheet_display <- function(df, min_rows = 20, min_cols = 18, header_row = NULL) {
-      df <- normalize_colnames(df)
-      df <- coerce_sheet_df(df)
-
-      n_cols <- max(ncol(df), min_cols)
-      header_row_values <- character(n_cols)
-      if (!is.null(header_row)) {
-        supplied <- as.character(header_row)
-        supplied[is.na(supplied)] <- ""
-        upto <- min(length(supplied), n_cols)
-        if (upto > 0) {
-          header_row_values[seq_len(upto)] <- supplied[seq_len(upto)]
-        }
-      } else if (ncol(df) > 0) {
-        header_row_values[seq_len(ncol(df))] <- names(df)
-      }
-      header_values <- normalize_names(header_row_values, default_column_names(n_cols))
-
-      n_data_rows <- max(nrow(df), min_rows - 1)
-      display <- as.data.frame(
-        matrix("", nrow = n_data_rows + 1, ncol = n_cols),
-        stringsAsFactors = FALSE,
-        check.names = FALSE
-      )
-      names(display) <- header_values
-      display[1, ] <- header_row_values
-
-      if (ncol(df) > 0 && nrow(df) > 0) {
-        display[seq_len(nrow(df)) + 1, seq_len(ncol(df))] <- df
-      }
-
-      display
-    }
-
     detect_delimiter <- function(path, default = ",") {
       first_line <- readLines(path, n = 1, warn = FALSE)
 
-      if (!length(first_line))
-        return(default)
-
-      # Count occurrences of common delimiters
-      counts <- c(
-        "," = lengths(
-          regmatches(first_line, gregexpr(",", first_line, fixed = TRUE))
-        ),
-        "\t" = lengths(
-          regmatches(first_line, gregexpr("\t", first_line, fixed = TRUE))
-        ),
-        ";" = lengths(
-          regmatches(first_line, gregexpr(";", first_line, fixed = TRUE))
-        )
-      )
-
-      # Return the delimiter with the highest count
-      return(names(which.max(counts)))
-    }
-
-    detect_delimiter_from_lines <- function(lines, default = ",") {
-      lines <- lines[!is.na(lines) & nzchar(trimws(lines))]
-
-      if (!length(lines)) {
+      if (!length(first_line)) {
         return(default)
       }
 
-      sample_line <- lines[[1]]
       counts <- c(
-        "," = lengths(
-          regmatches(sample_line, gregexpr(",", sample_line, fixed = TRUE))
-        ),
-        "\t" = lengths(
-          regmatches(sample_line, gregexpr("\t", sample_line, fixed = TRUE))
-        ),
-        ";" = lengths(
-          regmatches(sample_line, gregexpr(";", sample_line, fixed = TRUE))
-        )
+        "," = lengths(regmatches(first_line, gregexpr(",", first_line, fixed = TRUE))),
+        "\t" = lengths(regmatches(first_line, gregexpr("\t", first_line, fixed = TRUE))),
+        ";" = lengths(regmatches(first_line, gregexpr(";", first_line, fixed = TRUE)))
       )
-
-      if (all(counts == 0)) {
-        return(default)
-      }
 
       names(which.max(counts))
-    }
-
-    resolve_sheet_delimiter <- function(choice, df, default = "\t") {
-      if (!identical(choice, "auto")) {
-        return(choice)
-      }
-
-      df <- coerce_sheet_df(df)
-      if (!nrow(df) || !ncol(df)) {
-        return(default)
-      }
-
-      row_vectors <- lapply(seq_len(nrow(df)), function(idx) {
-        row_vals <- as.character(df[idx, , drop = TRUE])
-        row_vals[is.na(row_vals)] <- ""
-        row_vals
-      })
-
-      single_cell_lines <- unlist(lapply(row_vectors, function(row_vals) {
-        non_empty <- which(trimws(row_vals) != "")
-        if (length(non_empty) == 1) {
-          return(row_vals[non_empty])
-        }
-        character(0)
-      }), use.names = FALSE)
-
-      detected <- detect_delimiter_from_lines(single_cell_lines, default = default)
-      if (length(single_cell_lines)) {
-        return(detected)
-      }
-
-      has_multi_col_rows <- any(vapply(row_vectors, function(row_vals) {
-        sum(trimws(row_vals) != "") > 1
-      }, logical(1)))
-
-      if (isTRUE(has_multi_col_rows)) {
-        return("\t")
-      }
-
-      default
     }
 
     parse_uploaded_data <- function(file_path, ext, delimiter) {
@@ -256,7 +106,7 @@ mod_data_input_server <- function(id) {
         )
       }
 
-      raw_df <- coerce_sheet_df(raw_df)
+      raw_df <- coerce_to_character_df(raw_df)
 
       if (!ncol(raw_df)) {
         return(list(data = raw_df, header_row = character(0)))
@@ -272,36 +122,13 @@ mod_data_input_server <- function(id) {
       df <- if (nrow(raw_df) > 1) raw_df[-1, , drop = FALSE] else raw_df[FALSE, , drop = FALSE]
       names(df) <- normalize_names(header_row, default_column_names(ncol(raw_df)))
 
-      list(
-        data = df,
-        header_row = header_row
-      )
-    }
-
-    sheet_to_data <- function(df, use_first_row_headers = TRUE) {
-      df <- coerce_sheet_df(df)
-
-      if (!ncol(df)) {
-        return(df)
-      }
-
-      if (use_first_row_headers) {
-        header_values <- if (nrow(df) > 0) {
-          as.character(df[1, , drop = TRUE])
-        } else {
-          names(df)
-        }
-        body <- if (nrow(df) > 1) df[-1, , drop = FALSE] else df[FALSE, , drop = FALSE]
-        names(body) <- normalize_names(header_values, default_column_names(ncol(df)))
-        return(body)
-      }
-
-      normalize_colnames(df)
+      list(data = df, header_row = header_row)
     }
 
     trim_empty_rows_cols <- function(df) {
-      if (!ncol(df))
+      if (!ncol(df)) {
         return(df)
+      }
 
       is_blank_col <- vapply(df, function(col) {
         col_chr <- trimws(as.character(col))
@@ -326,60 +153,54 @@ mod_data_input_server <- function(id) {
       df
     }
 
-    sheet_data <- reactiveVal(make_empty_sheet())
-    uploaded_file <- reactiveVal(NULL)
-    uploaded_sheet_snapshot <- reactiveVal(NULL)
-    sheet_was_edited <- reactiveVal(FALSE)
-    delimiter_choice <- reactiveVal("auto")
-    pasted_applied_delimiter <- reactiveVal("auto")
-    upload_input_nonce <- reactiveVal(0)
+    auto_select_cols <- function(cols) {
+      cols[
+        grepl("^OPWELLS", cols, ignore.case = TRUE) |
+        grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE) |
+        grepl("Q(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE)
+      ]
+    }
 
-    output$upload_file_ui <- renderUI({
-      upload_input_nonce()
-      fileInput(
-        ns("upload_file"),
-        "Ladda upp datafil:",
-        accept = c(".xlsx", ".csv", ".tsv", ".txt")
-      )
-    })
-
-    show_delimiter <- reactive({
-      if (isTRUE(sheet_was_edited())) {
-        return(TRUE)
+    output$download_template <- downloadHandler(
+      filename = function() {
+        paste0("OPWELLS-", Sys.Date(), ".xlsx")
+      },
+      content = function(file) {
+        file.copy(file.path("data", "upload_template.xlsx"), file)
       }
+    )
 
-      file_info <- uploaded_file()
-      if (is.null(file_info) || is.null(file_info$name)) {
-        return(FALSE)
+    # ---- reactives ----
+    current_data <- reactiveVal(data.frame())
+    selected_cols <- reactiveVal(character(0))
+    scores <- reactiveVal(NULL)
+    delimiter_choice <- reactiveVal("auto")
+    uploaded_file_info <- reactiveVal(NULL)
+
+    output$delimiter_ui <- renderUI({
+      file_info <- uploaded_file_info()
+      if (is.null(file_info)) {
+        return(NULL)
       }
 
       ext <- tolower(tools::file_ext(file_info$name))
-      !identical(ext, "xlsx")
-    })
-
-    output$delimiter_ui <- renderUI({
-      if (!isTRUE(show_delimiter())) {
+      if (identical(ext, "xlsx")) {
         return(NULL)
       }
 
       selectInput(
         ns("delimiter"),
-        "Avgränsare",
+        "Avg\u00e4nsare",
         choices = c("Automatisk" = "auto", "Komma (CSV)" = ",", "Tab (TSV)" = "\t", "Semikolon" = ";"),
         selected = delimiter_choice()
       )
     })
 
-    refresh_uploaded_sheet <- function(update_snapshot = FALSE) {
-      file_info <- uploaded_file()
-      req(file_info)
-
+    load_file <- function(file_info, delimiter) {
       ext <- tolower(tools::file_ext(file_info$name))
       validate(
-        need(ext %in% c("xlsx", "csv", "tsv", "txt"), "Vänligen ladda upp xlsx-, csv-, eller tsv-/txt-filer.")
+        need(ext %in% c("xlsx", "csv", "tsv", "txt"), "V\u00e4nligen ladda upp xlsx-, csv-, eller tsv-/txt-filer.")
       )
-
-      delimiter <- delimiter_choice()
 
       parsed <- tryCatch(
         parse_uploaded_data(file_info$datapath, ext, delimiter),
@@ -387,197 +208,100 @@ mod_data_input_server <- function(id) {
       )
 
       validate(
-        need(!is.null(parsed) && !is.null(parsed$data), "Kunde inte analysera den uppladdade filen."),
-        need(!is.null(parsed$data) && ncol(parsed$data) > 0, "Uppladdad fil måste innehålla minst en kolumn.")
+        need(!is.null(parsed) && ncol(parsed$data) > 0, "Kunde inte analysera den uppladdade filen.")
       )
 
-      refreshed_sheet <- as_sheet_display(parsed$data, header_row = parsed$header_row)
-      sheet_data(refreshed_sheet)
+      df <- trim_empty_rows_cols(parsed$data)
+      current_data(df)
 
-      if (isTRUE(update_snapshot)) {
-        uploaded_sheet_snapshot(refreshed_sheet)
+      auto_cols <- auto_select_cols(names(df))
+      selected_cols(auto_cols)
+
+      if (length(auto_cols) > 0 && nrow(df) > 0) {
+        scores(compute_scaled_score(df, auto_cols))
+      } else {
+        scores(NULL)
       }
     }
-
-    reprocess_pasted_sheet <- function(target_choice, source_choice = NULL) {
-      current <- coerce_sheet_df(sheet_data())
-
-      if (!nrow(current) || !ncol(current)) {
-        return()
-      }
-
-      if (is.null(source_choice)) {
-        source_choice <- pasted_applied_delimiter()
-      }
-
-      source_sep <- resolve_sheet_delimiter(source_choice, current)
-      target_sep <- resolve_sheet_delimiter(target_choice, current)
-
-      row_vectors <- lapply(seq_len(nrow(current)), function(idx) {
-        row_vals <- as.character(current[idx, , drop = TRUE])
-        row_vals[is.na(row_vals)] <- ""
-        row_vals
-      })
-
-      single_cell_lines <- unlist(lapply(row_vectors, function(row_vals) {
-        non_empty <- which(trimws(row_vals) != "")
-        if (length(non_empty) == 1) {
-          return(row_vals[non_empty])
-        }
-        character(0)
-      }), use.names = FALSE)
-
-      parsed_rows <- lapply(row_vectors, function(row_vals) {
-        non_empty <- which(trimws(row_vals) != "")
-
-        if (!length(non_empty)) {
-          return(character(0))
-        }
-
-        upto <- max(non_empty)
-        row_text <- paste(row_vals[seq_len(upto)], collapse = source_sep)
-        pieces <- strsplit(row_text, target_sep, fixed = TRUE)[[1]]
-        trimws(pieces)
-      })
-
-      parsed_rows <- parsed_rows[lengths(parsed_rows) > 0]
-      if (!length(parsed_rows)) {
-        return()
-      }
-
-      n_cols <- max(lengths(parsed_rows))
-      raw_df <- as.data.frame(
-        matrix("", nrow = length(parsed_rows), ncol = n_cols),
-        stringsAsFactors = FALSE,
-        check.names = FALSE
-      )
-
-      for (idx in seq_along(parsed_rows)) {
-        parts <- parsed_rows[[idx]]
-        raw_df[idx, seq_along(parts)] <- parts
-      }
-
-      header_row <- as.character(raw_df[1, , drop = TRUE])
-      header_row[is.na(header_row)] <- ""
-      body <- if (nrow(raw_df) > 1) raw_df[-1, , drop = FALSE] else raw_df[FALSE, , drop = FALSE]
-      names(body) <- normalize_names(header_row, default_column_names(ncol(raw_df)))
-
-      sheet_data(as_sheet_display(body, header_row = header_row))
-      pasted_applied_delimiter(target_sep)
-      sheet_was_edited(TRUE)
-    }
-
-    output$sheet_ui <- renderUI({
-      rhandsontable::rHandsontableOutput(ns("sheet"), width = "100%", height = 450)
-    })
-
-    if (requireNamespace("rhandsontable", quietly = TRUE)) {
-      output$sheet <- rhandsontable::renderRHandsontable({
-        rhandsontable::rhandsontable(
-          sheet_data(),
-          rowHeaders = TRUE,
-          colHeaders = names(sheet_data()),
-          stretchH = "all",
-          minRows = 20,
-          minCols = 18,
-          colWidths = 100
-        ) |>
-          rhandsontable::hot_table(
-            contextMenu = TRUE,
-            manualRowResize = TRUE,
-            manualColumnResize = TRUE,
-            allowInvalid = TRUE
-          )
-      })
-    }
-
-    observeEvent(input$sheet, {
-      req(requireNamespace("rhandsontable", quietly = TRUE))
-      updated <- rhandsontable::hot_to_r(input$sheet)
-      validate(need(!is.null(updated), "Kunde inte läsa kalkylbladdata."))
-      synced <- sync_sheet_headers(updated, isTRUE(input$first_row_headers))
-      current <- sheet_data()
-
-      # rHandsontable may emit input updates during normal rendering; only
-      # treat it as an edit when the sheet content actually changes.
-      if (identical(synced, current)) {
-        return()
-      }
-
-      baseline <- uploaded_sheet_snapshot()
-      changed_from_uploaded <-
-        is.null(uploaded_file()) || is.null(baseline) || !identical(synced, baseline)
-
-      if (isTRUE(changed_from_uploaded)) {
-        sheet_was_edited(TRUE)
-      }
-
-      sheet_data(synced)
-    }, ignoreNULL = TRUE)
 
     observeEvent(input$upload_file, {
       if (is.null(input$upload_file)) {
-        uploaded_file(NULL)
-        uploaded_sheet_snapshot(NULL)
+        uploaded_file_info(NULL)
+        current_data(data.frame())
+        selected_cols(character(0))
+        scores(NULL)
         return()
       }
 
       delimiter_choice("auto")
-      pasted_applied_delimiter("auto")
-      uploaded_file(input$upload_file)
-      sheet_was_edited(FALSE)
-      refresh_uploaded_sheet(update_snapshot = TRUE)
+      uploaded_file_info(input$upload_file)
+      load_file(input$upload_file, "auto")
     })
 
     observeEvent(input$delimiter, {
-      if (is.null(input$delimiter)) {
-        return()
-      }
-
-      previous_choice <- delimiter_choice()
+      req(input$delimiter)
       delimiter_choice(input$delimiter)
+      file_info <- uploaded_file_info()
+      req(file_info)
+      load_file(file_info, input$delimiter)
+    }, ignoreInit = TRUE)
 
-      # If the user has pasted/edited the sheet, delimiter changes should
-      # reprocess the current sheet content rather than reloading the file.
-      if (isTRUE(sheet_was_edited()) || is.null(uploaded_file())) {
-        reprocess_pasted_sheet(delimiter_choice(), source_choice = previous_choice)
-        return()
+    output$upload_status <- renderUI({
+      df <- current_data()
+      sel <- selected_cols()
+
+      if (!is.data.frame(df) || nrow(df) == 0) {
+        return(NULL)
       }
 
-      sheet_was_edited(FALSE)
-      refresh_uploaded_sheet(update_snapshot = TRUE)
-    }, ignoreInit = TRUE)
+      if (!length(sel)) {
+        return(div(
+          class = "alert alert-warning",
+          "Inga OPWELLS/F1\u201310/Q1\u201310-kolumner hittades. Po\u00e4ng kan inte ber\u00e4knas automatiskt."
+        ))
+      }
 
-    observeEvent(input$clear_sheet, {
-      sheet_data(make_empty_sheet())
-      uploaded_file(NULL)
-      uploaded_sheet_snapshot(NULL)
-      sheet_was_edited(FALSE)
-      delimiter_choice("auto")
-      pasted_applied_delimiter("auto")
-      upload_input_nonce(upload_input_nonce() + 1)
+      n <- length(sel)
+      msg <- if (n == 10) {
+        paste0(
+          "\u2713 Skalad po\u00e4ng ber\u00e4knad fr\u00e5n ", n,
+          " kolumner: ", paste(sel, collapse = ", "), "."
+        )
+      } else {
+        paste0(
+          "Skalad po\u00e4ng ber\u00e4knad fr\u00e5n ", n,
+          " kolumner (exakt 10 rekommenderas): ", paste(sel, collapse = ", "), "."
+        )
+      }
+
+      div(
+        class = if (n == 10) "alert alert-success" else "alert alert-warning",
+        msg
+      )
     })
-
-    observeEvent(input$first_row_headers, {
-      sheet_data(sync_sheet_headers(sheet_data(), isTRUE(input$first_row_headers)))
-    }, ignoreInit = TRUE)
 
     data <- reactive({
-      df <- sheet_to_data(sheet_data(), isTRUE(input$first_row_headers))
-      req(df)
-      trim_empty_rows_cols(df)
+      current_data()
     })
 
-    output$preview <- renderTable({
-      validate(
-        need(
-          ncol(data()) > 0 && nrow(data()) > 0,
-          "Ingen data att förhandsgranska ännu. Klistra in eller ladda upp data under fliken 'Ladda data'."
-        )
+    likert_state <- reactive({
+      df <- current_data()
+      sel <- selected_cols()
+
+      list(
+        scaled_scores = scores(),
+        selected_columns = sel,
+        numeric_items = if (is.data.frame(df) && nrow(df) > 0 && length(sel)) {
+          get_likert_numeric_data(df, sel)
+        } else {
+          data.frame()
+        }
       )
-      head(data(), 20)
     })
 
-    data
+    list(
+      data = data,
+      likert_state = likert_state
+    )
   })
 }
