@@ -30,6 +30,22 @@ test_that("plot_normalize_group_selection keeps valid defaults", {
   )
 })
 
+test_that("plot_parse_group_definitions converts selections to labelled defs", {
+  mod_env <- make_mod_plot_env()
+
+  defs <- mod_env$plot_parse_group_definitions(list(sex = c("Kvinna", "Man"), age = "65-70"))
+  expect_length(defs, 3L)
+  expect_equal(defs[[1]]$col, "sex")
+  expect_equal(defs[[1]]$value, "Kvinna")
+  expect_equal(defs[[1]]$label, "Kvinna")
+  expect_equal(defs[[3]]$label, "65-70")
+
+  # values shared across columns are disambiguated
+  defs2 <- mod_env$plot_parse_group_definitions(list(col1 = "X", col2 = "X"))
+  expect_equal(defs2[[1]]$label, "col1: X")
+  expect_equal(defs2[[2]]$label, "col2: X")
+})
+
 test_that("plot_build_combined_payload assembles user, raw, and reference layers", {
   mod_env <- make_mod_plot_env()
 
@@ -50,8 +66,7 @@ test_that("plot_build_combined_payload assembles user, raw, and reference layers
   payload <- mod_env$plot_build_combined_payload(
     user_df = user_df,
     scores = c(10, 20, 30, 40),
-    group_col_name = "grp",
-    selected_groups = c("A", "B"),
+    group_definitions = mod_env$plot_parse_group_definitions(list(grp = c("A", "B"))),
     ref_df = ref_df,
     layers = c("user", "reference", "raw")
   )
@@ -83,8 +98,7 @@ test_that("plot_build_combined_payload reports missing reference groups graceful
   payload <- mod_env$plot_build_combined_payload(
     user_df = user_df,
     scores = c(10, 20, 30, 40),
-    group_col_name = "grp",
-    selected_groups = c("A", "B"),
+    group_definitions = mod_env$plot_parse_group_definitions(list(grp = c("A", "B"))),
     ref_df = ref_df,
     layers = c("user", "reference")
   )
@@ -99,8 +113,7 @@ test_that("plot_build_plotly_figure returns a plotly widget with traces", {
   payload <- mod_env$plot_build_combined_payload(
     user_df = data.frame(grp = c("A", "A", "B"), stringsAsFactors = FALSE),
     scores = c(20, 35, 60),
-    group_col_name = "grp",
-    selected_groups = c("A", "B"),
+    group_definitions = mod_env$plot_parse_group_definitions(list(grp = c("A", "B"))),
     ref_df = data.frame(
       group = c("A", "B"),
       mean = c(55, 62),
