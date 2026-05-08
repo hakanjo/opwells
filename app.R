@@ -4,6 +4,7 @@ library(bslib)
 library(readxl)
 library(rhandsontable)
 library(ggplot2)
+library(plotly)
 
 # Load additional functions
 file_list <- list.files(

@@ -1,40 +1,491 @@
+plot_trim_non_empty <- function(x) {
+  x_chr <- trimws(as.character(x))
+  x_chr[!is.na(x_chr) & nzchar(x_chr)]
+}
+
+plot_candidate_group_columns <- function(user_df) {
+  if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
+    return(character(0))
+  }
+
+  candidate_names <- names(user_df)
+  is_group_like <- vapply(candidate_names, function(col_nm) {
+    x <- user_df[[col_nm]]
+    out <- tryCatch({
+      x_chr <- plot_trim_non_empty(x)
+      if (!length(x_chr)) {
+        return(FALSE)
+      }
+
+      x_num <- suppressWarnings(as.numeric(x_chr))
+      all_numeric <- !any(is.na(x_num))
+      if (!all_numeric) {
+        return(TRUE)
+      }
+
+      length(unique(x_num)) <= 10
+    }, error = function(e) FALSE)
+
+    isTRUE(out)
+  }, logical(1))
+
+  candidate_names[is_group_like]
+}
+
+plot_normalize_group_selection <- function(selected, groups, target_n = 2L, allow_empty = FALSE) {
+  groups <- plot_trim_non_empty(groups)
+  groups <- unique(groups)
+  if (!length(groups)) {
+    return(character(0))
+  }
+
+  selected <- plot_trim_non_empty(selected)
+  selected <- unique(selected[selected %in% groups])
+
+  if (!length(selected) && !allow_empty) {
+    selected <- utils::head(groups, max(target_n, 1L))
+  }
+
+  if (target_n > 0 && length(selected) < target_n && !allow_empty) {
+    missing <- setdiff(groups, selected)
+    if (length(missing)) {
+      selected <- c(selected, utils::head(missing, target_n - length(selected)))
+    }
+  }
+
+  unique(selected)
+}
+
+plot_available_groups <- function(user_df = NULL, group_col_name = NULL, ref_df = NULL) {
+  if (is.data.frame(user_df) && nrow(user_df) > 0 && !is.null(group_col_name) && nzchar(group_col_name) && group_col_name %in% names(user_df)) {
+    user_groups <- sort(unique(plot_trim_non_empty(user_df[[group_col_name]])))
+    if (length(user_groups)) {
+      return(user_groups)
+    }
+  }
+
+  if (is.data.frame(ref_df) && nrow(ref_df) > 0 && "group" %in% names(ref_df)) {
+    return(sort(unique(plot_trim_non_empty(ref_df$group))))
+  }
+
+  character(0)
+}
+
+plot_build_user_data <- function(user_df, scores, group_col_name, selected_groups) {
+  if (!is.data.frame(user_df) || nrow(user_df) == 0 || is.null(scores)) {
+    return(list(summary = data.frame(), raw = data.frame()))
+  }
+
+  if (is.null(group_col_name) || !nzchar(group_col_name) || !(group_col_name %in% names(user_df))) {
+    return(list(summary = data.frame(), raw = data.frame()))
+  }
+
+  groups <- plot_trim_non_empty(user_df[[group_col_name]])
+  if (!length(groups)) {
+    return(list(summary = data.frame(), raw = data.frame()))
+  }
+
+  selected_groups <- plot_normalize_group_selection(selected_groups, sort(unique(groups)), target_n = 2L, allow_empty = TRUE)
+  if (!length(selected_groups)) {
+    return(list(summary = data.frame(), raw = data.frame()))
+  }
+
+  row_group_values <- trimws(as.character(user_df[[group_col_name]]))
+  selected_idx <- row_group_values %in% selected_groups
+  if (!any(selected_idx)) {
+    return(list(summary = data.frame(), raw = data.frame()))
+  }
+
+  score_values <- suppressWarnings(as.numeric(scores))
+  plot_rows <- which(selected_idx)
+  plot_scores <- score_values[selected_idx]
+  plot_groups <- row_group_values[selected_idx]
+
+  split_rows <- split(seq_along(plot_scores), plot_groups)
+  summary_list <- lapply(names(split_rows), function(group_label) {
+    idx <- split_rows[[group_label]]
+    x_clean <- plot_scores[idx]
+    x_clean <- x_clean[!is.na(x_clean)]
+    if (!length(x_clean)) {
+      return(data.frame(
+        group_label = group_label,
+        mean = NA_real_,
+        sd = NA_real_,
+        q_1_6 = NA_real_,
+        q_5_6 = NA_real_,
+        n = 0L,
+        source = "user",
+        hover_text = sprintf("<b>%s</b><br>Källa: Användardata<br>Inga giltiga poäng", group_label),
+        stringsAsFactors = FALSE
+      ))
+    }
+
+    mean_value <- mean(x_clean)
+    q_low <- as.numeric(stats::quantile(x_clean, probs = 1 / 6, na.rm = TRUE))
+    q_high <- as.numeric(stats::quantile(x_clean, probs = 5 / 6, na.rm = TRUE))
+
+    data.frame(
+      group_label = group_label,
+      mean = mean_value,
+      sd = stats::sd(x_clean),
+      q_1_6 = q_low,
+      q_5_6 = q_high,
+      n = length(x_clean),
+      source = "user",
+      hover_text = sprintf(
+        "<b>%s</b><br>Källa: Användardata<br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f<br>Antal svar: %d",
+        group_label,
+        mean_value,
+        q_low,
+        q_high,
+        length(x_clean)
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+
+  summary_data <- do.call(rbind, summary_list)
+  summary_data <- summary_data[summary_data$group_label %in% selected_groups, , drop = FALSE]
+
+  raw_data <- data.frame(
+    row_id = plot_rows,
+    group_label = plot_groups,
+    score_value = plot_scores,
+    source = "raw",
+    stringsAsFactors = FALSE
+  )
+  raw_data <- raw_data[!is.na(raw_data$score_value), , drop = FALSE]
+  raw_data$hover_text <- sprintf(
+    "<b>%s</b><br>Rad: %d<br>Skalad poäng: %.1f",
+    raw_data$group_label,
+    raw_data$row_id,
+    raw_data$score_value
+  )
+
+  list(summary = summary_data, raw = raw_data)
+}
+
+plot_build_reference_data <- function(ref_df, selected_groups) {
+  if (!is.data.frame(ref_df) || nrow(ref_df) == 0 || !all(c("group", "mean", "q_1_6", "q_5_6") %in% names(ref_df))) {
+    return(data.frame())
+  }
+
+  ref_df$group_label <- trimws(as.character(ref_df$group))
+  ref_df <- ref_df[!is.na(ref_df$group_label) & nzchar(ref_df$group_label), , drop = FALSE]
+  if (!length(selected_groups)) {
+    selected_groups <- unique(ref_df$group_label)
+  }
+
+  ref_df <- ref_df[ref_df$group_label %in% selected_groups, , drop = FALSE]
+  if (!nrow(ref_df)) {
+    return(data.frame())
+  }
+
+  ref_df$source <- "reference"
+  ref_df$hover_text <- sprintf(
+    "<b>%s</b><br>Källa: Referensdata<br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f",
+    ref_df$group_label,
+    suppressWarnings(as.numeric(ref_df$mean)),
+    suppressWarnings(as.numeric(ref_df$q_1_6)),
+    suppressWarnings(as.numeric(ref_df$q_5_6))
+  )
+
+  ref_df
+}
+
+plot_build_status_messages <- function(layers, user_df, scores, group_col_name, selected_groups, ref_summary) {
+  messages <- character(0)
+
+  show_user <- "user" %in% layers || "raw" %in% layers
+  show_ref <- "reference" %in% layers
+
+  if (show_user) {
+    if (!is.data.frame(user_df) || nrow(user_df) == 0) {
+      messages <- c(messages, "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att visa användardata.")
+    } else if (is.null(scores)) {
+      messages <- c(messages, "Ingen skalad poäng beräknad för användardata.")
+    } else if (is.null(group_col_name) || !nzchar(group_col_name) || !(group_col_name %in% names(user_df))) {
+      messages <- c(messages, "Välj en gruppdefinition för att jämföra användardata mellan grupper.")
+    } else if (!length(selected_groups)) {
+      messages <- c(messages, "Välj minst en grupp för att visa användardata.")
+    }
+  }
+
+  if (show_ref && length(selected_groups) && nrow(ref_summary) > 0) {
+    missing_groups <- setdiff(selected_groups, unique(ref_summary$group_label))
+    if (length(missing_groups)) {
+      messages <- c(messages, sprintf("Referensdata saknas för: %s", paste(missing_groups, collapse = ", ")))
+    }
+  }
+
+  unique(messages)
+}
+
+plot_build_combined_payload <- function(user_df, scores, group_col_name, selected_groups, ref_df, layers) {
+  layers <- unique(plot_trim_non_empty(layers))
+  user_data <- list(summary = data.frame(), raw = data.frame())
+  ref_summary <- data.frame()
+
+  if ("user" %in% layers || "raw" %in% layers) {
+    user_data <- plot_build_user_data(user_df, scores, group_col_name, selected_groups)
+  }
+
+  if ("reference" %in% layers) {
+    ref_summary <- plot_build_reference_data(ref_df, selected_groups)
+  }
+
+  ordered_groups <- unique(c(selected_groups, user_data$summary$group_label, ref_summary$group_label, user_data$raw$group_label))
+  ordered_groups <- ordered_groups[!is.na(ordered_groups) & nzchar(ordered_groups)]
+
+  list(
+    user_summary = user_data$summary,
+    user_raw = if ("raw" %in% layers) user_data$raw else data.frame(),
+    ref_summary = ref_summary,
+    ordered_groups = ordered_groups,
+    status_messages = plot_build_status_messages(
+      layers = layers,
+      user_df = user_df,
+      scores = scores,
+      group_col_name = group_col_name,
+      selected_groups = selected_groups,
+      ref_summary = ref_summary
+    )
+  )
+}
+
+plot_build_empty_figure <- function(message) {
+  plotly::plot_ly() |>
+    plotly::layout(
+      xaxis = list(visible = FALSE),
+      yaxis = list(visible = FALSE),
+      annotations = list(list(
+        text = message,
+        x = 0.5,
+        y = 0.5,
+        xref = "paper",
+        yref = "paper",
+        showarrow = FALSE,
+        font = list(size = 15, color = "#5a5a5a")
+      )),
+      margin = list(l = 30, r = 30, t = 20, b = 20)
+    )
+}
+
+plot_group_jitter <- function(n) {
+  if (n <= 1) {
+    return(0)
+  }
+
+  seq(-0.18, 0.18, length.out = n)
+}
+
+plot_build_plotly_figure <- function(payload) {
+  present_groups <- payload$ordered_groups[payload$ordered_groups %in% unique(c(
+    payload$user_summary$group_label,
+    payload$ref_summary$group_label,
+    payload$user_raw$group_label
+  ))]
+
+  if (!length(present_groups)) {
+    return(plot_build_empty_figure("Ingen data att visa för det aktuella urvalet."))
+  }
+
+  y_positions <- stats::setNames(seq_along(present_groups), present_groups)
+
+  # Pre-build batched data frames with resolved y positions so we can add each
+  # trace type once rather than per-group, avoiding the untyped orphan trace
+  # that results from loop-accumulating onto an empty plot_ly() base.
+  user_plot <- data.frame()
+  ref_plot  <- data.frame()
+  raw_plot  <- data.frame()
+
+  for (group_label in present_groups) {
+    base_y <- unname(y_positions[[group_label]])
+
+    ur <- payload$user_summary[payload$user_summary$group_label == group_label, , drop = FALSE]
+    if (nrow(ur) > 0) {
+      ur$y_val  <- base_y + 0.12
+      user_plot <- rbind(user_plot, ur)
+    }
+
+    rr <- payload$ref_summary[payload$ref_summary$group_label == group_label, , drop = FALSE]
+    if (nrow(rr) > 0) {
+      rr$y_val <- base_y - 0.12
+      ref_plot <- rbind(ref_plot, rr)
+    }
+
+    raw <- payload$user_raw[payload$user_raw$group_label == group_label, , drop = FALSE]
+    if (nrow(raw) > 0) {
+      raw$y_value <- base_y + 0.12 + plot_group_jitter(nrow(raw))
+      raw_plot    <- rbind(raw_plot, raw)
+    }
+  }
+
+  has_user <- nrow(user_plot) > 0
+  has_ref  <- nrow(ref_plot)  > 0
+  has_raw  <- nrow(raw_plot)  > 0
+
+  # Initialise with a typed, invisible base trace so Plotly never encounters an
+  # untyped trace and therefore never emits "no trace type specified" warnings.
+  fig <- plotly::plot_ly(
+    type        = "scatter",
+    mode        = "none",
+    showlegend  = FALSE,
+    hoverinfo   = "none"
+  )
+
+  if (has_user) {
+    fig <- fig |>
+      plotly::add_segments(
+        data      = user_plot,
+        x         = ~q_1_6,
+        xend      = ~q_5_6,
+        y         = ~y_val,
+        yend      = ~y_val,
+        line      = list(color = "#1f78b4", width = 4),
+        text      = ~hover_text,
+        hoverinfo = "text",
+        showlegend = FALSE,
+        inherit   = FALSE
+      ) |>
+      plotly::add_markers(
+        data        = user_plot,
+        x           = ~mean,
+        y           = ~y_val,
+        marker      = list(color = "#1f78b4", size = 11, symbol = "circle"),
+        text        = ~hover_text,
+        hoverinfo   = "text",
+        name        = "Användardata",
+        legendgroup = "user",
+        showlegend  = TRUE,
+        inherit     = FALSE
+      )
+  }
+
+  if (has_ref) {
+    fig <- fig |>
+      plotly::add_segments(
+        data      = ref_plot,
+        x         = ~q_1_6,
+        xend      = ~q_5_6,
+        y         = ~y_val,
+        yend      = ~y_val,
+        line      = list(color = "#e07a2f", width = 4, dash = "dot"),
+        text      = ~hover_text,
+        hoverinfo = "text",
+        showlegend = FALSE,
+        inherit   = FALSE
+      ) |>
+      plotly::add_markers(
+        data        = ref_plot,
+        x           = ~mean,
+        y           = ~y_val,
+        marker      = list(color = "#e07a2f", size = 11, symbol = "diamond-open"),
+        text        = ~hover_text,
+        hoverinfo   = "text",
+        name        = "Referensdata",
+        legendgroup = "reference",
+        showlegend  = TRUE,
+        inherit     = FALSE
+      )
+  }
+
+  if (has_raw) {
+    fig <- fig |>
+      plotly::add_markers(
+        data        = raw_plot,
+        x           = ~score_value,
+        y           = ~y_value,
+        marker      = list(color = "rgba(31,120,180,0.35)", size = 8, symbol = "circle-open"),
+        text        = ~hover_text,
+        hoverinfo   = "text",
+        name        = "Individuella datapunkter",
+        legendgroup = "raw",
+        showlegend  = TRUE,
+        inherit     = FALSE
+      )
+  }
+
+  fig |>
+    plotly::layout(
+      xaxis = list(
+        title = "",
+        range = c(0, 100),
+        tickmode = "linear",
+        dtick = 10,
+        zeroline = FALSE
+      ),
+      yaxis = list(
+        title = "",
+        tickmode = "array",
+        tickvals = unname(y_positions),
+        ticktext = names(y_positions),
+        autorange = "reversed",
+        zeroline = FALSE
+      ),
+      hovermode = "closest",
+      margin = list(l = 150, r = 40, t = 20, b = 80),
+      legend = list(orientation = "h", x = 0, y = -0.15),
+      annotations = list(
+        list(
+          text = "Lägst välbefinnande",
+          x = 0,
+          y = -0.14,
+          xref = "x",
+          yref = "paper",
+          showarrow = FALSE,
+          xanchor = "left",
+          font = list(color = "#6b6b6b")
+        ),
+        list(
+          text = "Högst välbefinnande",
+          x = 100,
+          y = -0.14,
+          xref = "x",
+          yref = "paper",
+          showarrow = FALSE,
+          xanchor = "right",
+          font = list(color = "#6b6b6b")
+        )
+      )
+    ) |>
+    plotly::config(displayModeBar = TRUE, responsive = TRUE)
+}
+
 mod_plot_ui <- function(id) {
   ns <- NS(id)
 
   tagList(
     br(),
-    tabsetPanel(
-      id = ns("plot_tab"),
-      tabPanel(
-        "Användardata",
-        value = "user",
-        br(),
-        p("Symbolerna visar medelvärden för välbefinnande. Pilarna omkring dessa visar spannet där två tredjedelar av de svarandes välbefinnande befinner sig."),
-        p("Om du klickar på bilden får du upp punkter med alla svarandes välbefinnande per kategori. Du kan hålla pekaren över en punk och få information om vilken rad i din datafil den motsvarar."),
-        fluidRow(
-          column(
-            width = 4,
-            selectInput(ns("group_col"), "Gruppdefinition", choices = NULL),
-            uiOutput(ns("user_groups_ui")),
-            actionButton(ns("add_user_group"), "Lägg till grupp")
-          )
+    fluidRow(
+      column(
+        width = 4,
+        p("Jämför användardata och referensdata i samma figur. Välj grupper till vänster och håll pekaren över punkter eller sammanfattningar för detaljer."),
+        selectInput(ns("group_col"), "Gruppdefinition i användardata", choices = character(0)),
+        selectizeInput(
+          ns("selected_groups"),
+          "Grupper att visa",
+          choices = NULL,
+          selected = NULL,
+          multiple = TRUE,
+          options = list(plugins = list("remove_button"))
         ),
-        plotOutput(ns("user_plot"), height = "500px", click = ns("user_plot_click"))
+        checkboxGroupInput(
+          ns("data_layers"),
+          "Visa i figuren",
+          choices = c(
+            "Användardata" = "user",
+            "Referensdata" = "reference",
+            "Individuella datapunkter" = "raw"
+          ),
+          selected = c("user", "reference")
+        ),
+        uiOutput(ns("plot_status"))
       ),
-      tabPanel(
-        "Referensdata",
-        value = "ref",
-        br(),
-        p("Symbolerna visar medelvärden för välbefinnande. Pilarna omkring dessa visar spannet där två tredjedelar av de svarandes välbefinnande befinner sig."),
-        p("Om du klickar på bilden får du upp punkter med alla svarandes välbefinnande per kategori. Du kan hålla pekaren över en punk och få information om vilken rad i din datafil den motsvarar."),
-        fluidRow(
-          column(
-            width = 4,
-            uiOutput(ns("ref_groups_ui")),
-            actionButton(ns("add_ref_group"), "Lägg till grupp")
-          )
-        ),
-        plotOutput(ns("ref_plot"), height = "500px", click = ns("ref_plot_click"))
+      column(
+        width = 8,
+        p("Sammanfattningsmarkören visar gruppens medelvärde. Linjen visar spannet där ungefär två tredjedelar av svaren ligger. Referensdata visas med separat symbol och linjestil."),
+        plotly::plotlyOutput(ns("comparison_plot"), height = "560px")
       )
     )
   )
@@ -42,7 +493,6 @@ mod_plot_ui <- function(id) {
 
 mod_plot_server <- function(id, data = NULL, scores = NULL) {
   moduleServer(id, function(input, output, session) {
-
     current_scores <- reactive({
       if (is.null(scores)) {
         return(NULL)
@@ -56,674 +506,90 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       value
     })
 
-    normalize_group_selection <- function(selected, groups, target_n = 2L) {
-      groups <- as.character(groups)
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-      if (!length(groups)) {
-        return(character(0))
-      }
-
-      selected <- as.character(selected)
-      selected <- selected[!is.na(selected) & nzchar(selected)]
-      selected <- selected[selected %in% groups]
-      selected <- unique(selected)
-
-      if (!length(selected)) {
-        selected <- groups[1]
-      }
-
-      if (target_n > 0 && length(selected) < target_n) {
-        missing <- setdiff(groups, selected)
-        if (length(missing)) {
-          selected <- c(selected, utils::head(missing, target_n - length(selected)))
-        }
-      }
-
-      selected
-    }
-
-    group_choice_for_index <- function(groups, selected_groups, idx) {
-      groups <- as.character(groups)
-      if (!length(groups)) return(character(0))
-
-      current <- selected_groups[idx]
-      others <- selected_groups[-idx]
-      available <- c(current, setdiff(groups, others))
-      available <- unique(available)
-
-      c(intersect(groups, available), setdiff(available, groups))
-    }
-
-    build_click_targets <- function(summary_df, ordered_groups, raw_df = NULL, raw_value_col = NULL) {
-      req(nrow(summary_df) > 0)
-
-      ordered_groups <- as.character(ordered_groups)
-      summary_df$group_label <- as.character(summary_df$group_label)
-      summary_df <- summary_df[summary_df$group_label %in% ordered_groups, , drop = FALSE]
-      req(nrow(summary_df) > 0)
-
-      present_groups <- ordered_groups[ordered_groups %in% summary_df$group_label]
-      req(length(present_groups) >= 1)
-
-      summary_points <- data.frame(
-        group_label = summary_df$group_label,
-        x = summary_df$mean,
-        y = as.numeric(factor(summary_df$group_label, levels = rev(present_groups))),
-        stringsAsFactors = FALSE
-      )
-
-      raw_points <- data.frame(group_label = character(0), x = numeric(0), y = numeric(0), stringsAsFactors = FALSE)
-      if (!is.null(raw_df) && nrow(raw_df) > 0 && !is.null(raw_value_col) && raw_value_col %in% names(raw_df)) {
-        raw_df$group_label <- as.character(raw_df$group_label)
-        raw_df <- raw_df[raw_df$group_label %in% present_groups, , drop = FALSE]
-        if (nrow(raw_df) > 0) {
-          x_values <- suppressWarnings(as.numeric(raw_df[[raw_value_col]]))
-          keep <- !is.na(x_values)
-          raw_points <- data.frame(
-            group_label = raw_df$group_label[keep],
-            x = x_values[keep],
-            y = as.numeric(factor(raw_df$group_label[keep], levels = rev(present_groups))),
-            stringsAsFactors = FALSE
-          )
-        }
-      }
-
-      list(summary = summary_points, raw = raw_points, present_groups = present_groups)
-    }
-
-    build_summary_plot <- function(plot_df, group_col_name, ordered_groups, exploded = FALSE, raw_df = NULL, raw_value_col = NULL) {
-      req(nrow(plot_df) > 0)
-
-      ordered_groups <- as.character(ordered_groups)
-      plot_df$group_label <- as.character(plot_df[[group_col_name]])
-      plot_df <- plot_df[plot_df$group_label %in% ordered_groups, , drop = FALSE]
-      req(nrow(plot_df) > 0)
-
-      present_groups <- ordered_groups[ordered_groups %in% plot_df$group_label]
-      req(length(present_groups) >= 1)
-
-      n_groups <- length(present_groups)
-      colors <- grDevices::hcl.colors(max(n_groups, 1), palette = "Set 2")
-      shapes <- rep(c(21, 22, 23, 24, 25, 3, 4, 8, 15, 16), length.out = n_groups)
-      color_map <- setNames(colors, present_groups)
-      shape_map <- setNames(shapes, present_groups)
-
-      plot_df$group_position <- factor(
-        plot_df$group_label,
-        levels = rev(present_groups)
-      )
-      plot_df$y_numeric <- as.numeric(plot_df$group_position)
-      plot_df$point_color <- unname(color_map[plot_df$group_label])
-      plot_df$point_shape <- unname(shape_map[plot_df$group_label])
-
-      p <- ggplot(plot_df, aes(x = mean, y = group_position)) +
-        scale_x_continuous(
-        limits = c(0, 100),
-        breaks = seq(0, 100, by = 10)
-      ) +
-      labs(
-        x = NULL,
-        y = NULL
-      ) +
-      annotate(
-        "text", label = "Lägst välbefinnande",
-        x = 0, y = -Inf, vjust = -1.5, hjust = "left", size = 5,
-        color = "grey70"
-      ) +
-      annotate(
-        "text", label = "Högst välbefinnande",
-        x = 100, y = -Inf, vjust = -1.5, hjust = "right", size = 5,
-        color = "grey70"
-      ) +
-      theme_minimal() +
-      theme(
-        panel.grid = element_blank(),
-        axis.line.x = element_line(linewidth = 1, color = "black"),
-        plot.caption = element_text(size = 12, color = "grey40"),
-        axis.text = element_text(size = 12),
-        axis.text.y = element_blank()
-      )
-
-      if (exploded) {
-        raw_plot <- data.frame()
-        if (!is.null(raw_df) && nrow(raw_df) > 0 && !is.null(raw_value_col) && raw_value_col %in% names(raw_df)) {
-          raw_plot <- raw_df
-          raw_plot$group_label <- as.character(raw_plot$group_label)
-          raw_plot <- raw_plot[raw_plot$group_label %in% present_groups, , drop = FALSE]
-          raw_plot$score_value <- suppressWarnings(as.numeric(raw_plot[[raw_value_col]]))
-          raw_plot <- raw_plot[!is.na(raw_plot$score_value), , drop = FALSE]
-          if (nrow(raw_plot) > 0) {
-            raw_plot$group_position <- factor(raw_plot$group_label, levels = rev(present_groups))
-            raw_plot$point_color <- unname(color_map[raw_plot$group_label])
-            p <- p +
-              geom_point(
-                data = raw_plot,
-                aes(x = score_value, y = group_position, fill = point_color),
-                position = position_nudge(
-                  y = runif(nrow(raw_plot), -0.5, -0.05)
-                ),
-                size = 3,
-                alpha = 0.5,
-                shape = 21,
-                stroke = 0.5
-              ) +
-              geom_segment(
-                aes(
-                  x = q_1_6,
-                  xend = q_5_6,
-                  y = group_position,
-                  yend = group_position
-                ),
-                color = "black",
-                linewidth = 1,
-                arrow = arrow(
-                  ends = "both",
-                  type = "closed",
-                  length = unit(0.25, "cm")
-                )
-              ) +
-              geom_segment(
-                aes(
-                  x = mean,
-                  xend = mean,
-                  y = group_position,
-                  yend = 0
-                ),
-                color = "grey70",
-                linewidth = 0.5
-              ) +
-              geom_point(
-                aes(fill = point_color, shape = point_shape),
-                size = 5,
-                stroke = 1.5
-              ) +
-              geom_text(
-                aes(label = paste0(group_label, "\n", round(mean, 0), " (", round(q_1_6, 0), "–", round(q_5_6, 0), ")")),
-                vjust = -0.5,
-                size = 5,
-                color = "black",
-                fontface = "bold"
-              ) +
-              scale_fill_identity() +
-              scale_shape_identity()
-          }
-        }
-      } else {
-        p <- p +
-          geom_segment(
-            aes(
-              x = q_1_6,
-              xend = q_5_6,
-              y = group_position,
-              yend = group_position
-            ),
-            color = "black",
-            linewidth = 1,
-            arrow = arrow(
-              ends = "both",
-              type = "closed",
-              length = unit(0.25, "cm")
-            )
-          ) +
-          geom_segment(
-            aes(
-              x = mean,
-              xend = mean,
-              y = group_position,
-              yend = 0
-            ),
-            color = "grey70",
-            linewidth = 0.5
-          ) +
-          geom_point(
-            aes(fill = point_color, shape = point_shape),
-            size = 5,
-            stroke = 1.5
-          ) +
-          geom_text(
-            aes(label = paste0(group_label, "\n", round(mean, 0), " (", round(q_1_6, 0), "–", round(q_5_6, 0), ")")),
-            vjust = -0.5,
-            size = 5,
-            color = "black",
-            fontface = "bold"
-          ) +
-          scale_fill_identity() +
-          scale_shape_identity()
-      }
-
-      p
-    }
-
-    # Reference data plot
     ref_data <- reactive({
       load_ref_data()
     })
 
-    ref_selected_groups <- reactiveVal(character(0))
-    ref_exploded <- reactiveVal(FALSE)
-    ref_remove_observers <- list()
-    ref_select_observers <- list()
-
-    observe({
-      ref_df <- ref_data()
-      groups <- sort(unique(as.character(ref_df$group)))
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-
-      current <- ref_selected_groups()
-      has_valid_current <- length(intersect(current, groups)) > 0
-      target_n <- if (has_valid_current) 1L else 2L
-      ref_selected_groups(normalize_group_selection(current, groups, target_n = target_n))
-    })
-
-    output$ref_groups_ui <- renderUI({
-      ref_df <- ref_data()
-      groups <- sort(unique(as.character(ref_df$group)))
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-      selected <- ref_selected_groups()
-      if (!length(selected)) return(NULL)
-
-      tagList(lapply(seq_along(selected), function(i) {
-        fluidRow(
-          column(
-            width = 9,
-            selectInput(
-              session$ns(paste0("ref_group_", i)),
-              label = paste("Grupp", i),
-              choices = group_choice_for_index(groups, selected, i),
-              selected = selected[i]
-            )
-          ),
-          column(
-            width = 3,
-            br(),
-            actionButton(
-              session$ns(paste0("remove_ref_group_", i)),
-              label = "Ta bort",
-              class = "btn btn-default btn-sm"
-            )
-          )
-        )
-      }))
-    })
-
-    observe({
-      lapply(ref_remove_observers, function(obs) obs$destroy())
-      lapply(ref_select_observers, function(obs) obs$destroy())
-      ref_remove_observers <<- list()
-      ref_select_observers <<- list()
-
-      selected <- ref_selected_groups()
-      if (!length(selected)) return()
-
-      ref_remove_observers <<- lapply(seq_along(selected), function(i) {
-        observeEvent(input[[paste0("remove_ref_group_", i)]], {
-          current <- ref_selected_groups()
-          if (length(current) <= 1) {
-            showNotification("Minst en grupp måste vara vald.", type = "message", duration = 3)
-            return()
-          }
-          current <- current[-i]
-          ref_selected_groups(current)
-        }, ignoreInit = TRUE)
-      })
-
-      ref_select_observers <<- lapply(seq_along(selected), function(i) {
-        observeEvent(input[[paste0("ref_group_", i)]], {
-          value <- input[[paste0("ref_group_", i)]]
-          current <- ref_selected_groups()
-          if (i > length(current) || is.null(value) || !nzchar(value)) return()
-
-          if (value %in% current[-i]) {
-            return()
-          }
-          current[i] <- value
-          ref_selected_groups(current)
-        }, ignoreInit = TRUE)
-      })
-    })
-
-    observeEvent(input$add_ref_group, {
-      ref_df <- ref_data()
-      groups <- sort(unique(as.character(ref_df$group)))
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-
-      current <- ref_selected_groups()
-      if (!length(groups)) {
-        ref_selected_groups(character(0))
-        return()
-      }
-
-      next_group <- setdiff(groups, current)
-      if (!length(next_group)) {
-        showNotification("Alla tillgängliga grupper är redan valda.", type = "warning", duration = 3)
-        return()
-      }
-      ref_selected_groups(c(current, next_group[1]))
-    }, ignoreInit = TRUE)
-
-    observeEvent(ref_selected_groups(), {
-      ref_exploded(FALSE)
-    }, ignoreInit = TRUE)
-
-    observeEvent(input$ref_plot_click, {
-      click <- input$ref_plot_click
-      if (is.null(click)) return()
-
-      if (isTRUE(ref_exploded())) {
-        ref_exploded(FALSE)
-        return()
-      }
-
-      showNotification(
-        "Referensdata innehåller endast sammanfattningsmått och saknar underliggande datapunkter.",
-        type = "message",
-        duration = 3
-      )
-    }, ignoreInit = TRUE)
-
-    output$ref_plot <- renderPlot({
-      ref_df <- ref_data()
-      selected <- ref_selected_groups()
-      req(length(selected) >= 1)
-
-      plot_data <- ref_df[as.character(ref_df$group) %in% selected, , drop = FALSE]
-      req(nrow(plot_data) > 0)
-      plot_data$group_label <- as.character(plot_data$group)
-
-      build_summary_plot(plot_data, "group", selected, exploded = isTRUE(ref_exploded()))
-    })
-
-    # User data plot
-    user_selected_groups <- reactiveVal(character(0))
-    user_exploded <- reactiveVal(FALSE)
-    user_remove_observers <- list()
-    user_select_observers <- list()
-
-    observe({
-      if (is.null(data)) return()
-      user_df <- data()
-      req(is.data.frame(user_df), nrow(user_df) > 0)
-
-      # Find likely grouping columns while tolerating mixed/complex column types.
-      candidate_names <- names(user_df)
-      if (!length(candidate_names)) return()
-
-      is_group_like <- vapply(candidate_names, function(col_nm) {
-        x <- user_df[[col_nm]]
-        out <- tryCatch({
-          x_chr <- trimws(as.character(x))
-          x_chr <- x_chr[!is.na(x_chr) & nzchar(x_chr)]
-          if (!length(x_chr)) return(FALSE)
-
-          x_num <- suppressWarnings(as.numeric(x_chr))
-          all_numeric <- !any(is.na(x_num))
-          if (!all_numeric) {
-            return(TRUE)
-          }
-
-          length(unique(x_num)) <= 10
-        }, error = function(e) FALSE)
-
-        isTRUE(out)
-      }, logical(1))
-
-      potential_group_cols <- candidate_names[is_group_like]
-      
-      if (length(potential_group_cols) > 0) {
-        updateSelectInput(session, "group_col", choices = potential_group_cols, selected = potential_group_cols[1])
-      }
-    })
-
-    observe({
-      if (is.null(data) || is.null(input$group_col)) return()
-      user_df <- data()
-      req(is.data.frame(user_df), nrow(user_df) > 0, nzchar(input$group_col))
-      
-      if (input$group_col %in% names(user_df)) {
-        groups <- sort(unique(as.character(user_df[[input$group_col]])))
-        groups <- groups[groups != "" & !is.na(groups)]
-
-        current <- user_selected_groups()
-        has_valid_current <- length(intersect(current, groups)) > 0
-        target_n <- if (has_valid_current) 1L else 2L
-        user_selected_groups(normalize_group_selection(current, groups, target_n = target_n))
-      }
-    })
-
-    output$user_groups_ui <- renderUI({
-      if (is.null(data) || is.null(input$group_col)) return(NULL)
-      user_df <- data()
-      req(is.data.frame(user_df), nrow(user_df) > 0, nzchar(input$group_col))
-      req(input$group_col %in% names(user_df))
-
-      groups <- sort(unique(as.character(user_df[[input$group_col]])))
-      groups <- groups[groups != "" & !is.na(groups)]
-      selected <- user_selected_groups()
-      if (!length(selected)) return(NULL)
-
-      tagList(lapply(seq_along(selected), function(i) {
-        fluidRow(
-          column(
-            width = 9,
-            selectInput(
-              session$ns(paste0("user_group_", i)),
-              label = paste("Grupp", i),
-              choices = group_choice_for_index(groups, selected, i),
-              selected = selected[i]
-            )
-          ),
-          column(
-            width = 3,
-            br(),
-            actionButton(
-              session$ns(paste0("remove_user_group_", i)),
-              label = "Ta bort",
-              class = "btn btn-default btn-sm"
-            )
-          )
-        )
-      }))
-    })
-
-    observe({
-      lapply(user_remove_observers, function(obs) obs$destroy())
-      lapply(user_select_observers, function(obs) obs$destroy())
-      user_remove_observers <<- list()
-      user_select_observers <<- list()
-
-      selected <- user_selected_groups()
-      if (!length(selected)) return()
-
-      user_remove_observers <<- lapply(seq_along(selected), function(i) {
-        observeEvent(input[[paste0("remove_user_group_", i)]], {
-          current <- user_selected_groups()
-          if (length(current) <= 1) {
-            showNotification("Minst en grupp måste vara vald.", type = "message", duration = 3)
-            return()
-          }
-          current <- current[-i]
-          user_selected_groups(current)
-        }, ignoreInit = TRUE)
-      })
-
-      user_select_observers <<- lapply(seq_along(selected), function(i) {
-        observeEvent(input[[paste0("user_group_", i)]], {
-          value <- input[[paste0("user_group_", i)]]
-          current <- user_selected_groups()
-          if (i > length(current) || is.null(value) || !nzchar(value)) return()
-
-          if (value %in% current[-i]) {
-            return()
-          }
-          current[i] <- value
-          user_selected_groups(current)
-        }, ignoreInit = TRUE)
-      })
-    })
-
-    observeEvent(input$add_user_group, {
-      if (is.null(data) || is.null(input$group_col)) return()
-      user_df <- data()
-      req(is.data.frame(user_df), nrow(user_df) > 0, nzchar(input$group_col))
-      req(input$group_col %in% names(user_df))
-
-      groups <- sort(unique(as.character(user_df[[input$group_col]])))
-      groups <- groups[groups != "" & !is.na(groups)]
-
-      current <- user_selected_groups()
-      if (!length(groups)) {
-        user_selected_groups(character(0))
-        return()
-      }
-
-      next_group <- setdiff(groups, current)
-      if (!length(next_group)) {
-        showNotification("Alla tillgängliga grupper är redan valda.", type = "warning", duration = 3)
-        return()
-      }
-      user_selected_groups(c(current, next_group[1]))
-    }, ignoreInit = TRUE)
-
-    user_plot_payload <- reactive({
-      if (is.null(data)) return(NULL)
-      user_df <- data()
-      selected <- user_selected_groups()
-
-      if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
-        return(NULL)
-      }
-
-      if (is.null(current_scores())) {
-        return(NULL)
-      }
-
-      req(
-        !is.null(input$group_col),
-        nzchar(input$group_col),
-        input$group_col %in% names(user_df),
-        length(selected) >= 1
-      )
-
-      row_idx <- as.character(user_df[[input$group_col]]) %in% selected
-      plot_data <- user_df[row_idx, , drop = FALSE]
-      req(nrow(plot_data) > 0)
-
-      plot_scores <- suppressWarnings(as.numeric(current_scores()[row_idx]))
-      group_col_name <- input$group_col
-      grp_vals <- as.character(plot_data[[group_col_name]])
-      split_scores <- split(plot_scores, grp_vals)
-
-      summary_list <- lapply(names(split_scores), function(g) {
-        x <- split_scores[[g]]
-        x_clean <- x[!is.na(x)]
-        if (!length(x_clean)) {
-          return(data.frame(group = g, mean = NA_real_, sd = NA_real_, q_1_6 = NA_real_, q_5_6 = NA_real_, n = 0L, stringsAsFactors = FALSE))
-        }
-
-        data.frame(
-          group = g,
-          mean = mean(x_clean),
-          sd = stats::sd(x_clean),
-          q_1_6 = quantile(x_clean, probs = 1/6, na.rm = TRUE),
-          q_5_6 = quantile(x_clean, probs = 5/6, na.rm = TRUE),
-          n = length(x_clean),
-          stringsAsFactors = FALSE
-        )
-      })
-
-      summary_data <- do.call(rbind, summary_list)
-      names(summary_data)[names(summary_data) == "group"] <- group_col_name
-      summary_data$group_label <- as.character(summary_data[[group_col_name]])
-
-      raw_data <- data.frame(
-        group_label = grp_vals,
-        score_value = plot_scores,
-        stringsAsFactors = FALSE
-      )
-      raw_data <- raw_data[!is.na(raw_data$score_value), , drop = FALSE]
-
-      list(
-        summary = summary_data,
-        raw = raw_data,
-        selected = selected,
-        group_col_name = group_col_name
-      )
-    })
-
-    observeEvent(list(user_selected_groups(), input$group_col), {
-      user_exploded(FALSE)
-    }, ignoreInit = TRUE)
-
-    observeEvent(input$user_plot_click, {
-      click <- input$user_plot_click
-      if (is.null(click)) return()
-
-      payload <- user_plot_payload()
-      if (is.null(payload)) return()
-
-      if (isTRUE(user_exploded())) {
-        user_exploded(FALSE)
-        return()
-      }
-
-      if (nrow(payload$raw) > 0) {
-        user_exploded(TRUE)
-      }
-    }, ignoreInit = TRUE)
-
-    observeEvent(input$plot_tab, {
-      if (!identical(input$plot_tab, "user")) {
-        return()
-      }
-
-      notification_id <- session$ns("user_plot_status")
-
+    user_data <- reactive({
       if (is.null(data)) {
-        showNotification(
-          "Ingen användardata laddad. Ladda data i fliken Ladda data för att visa ett diagram.",
-          type = "warning",
-          duration = 3,
-          id = notification_id
-        )
-        return()
+        return(NULL)
       }
 
-      user_df <- data()
-      if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
-        showNotification(
-          "Ingen användardata laddad. Ladda data i fliken Ladda data för att visa ett diagram.",
-          type = "warning",
-          duration = 3,
-          id = notification_id
-        )
-        return()
+      value <- data()
+      if (!is.data.frame(value) || nrow(value) == 0 || ncol(value) == 0) {
+        return(NULL)
       }
 
-      if (is.null(current_scores())) {
-        showNotification(
-          "Ingen skalad poäng beräknad.",
-          type = "warning",
-          duration = 3,
-          id = notification_id
-        )
-        return()
+      value
+    })
+
+    observe({
+      user_df <- user_data()
+      group_choices <- plot_candidate_group_columns(user_df)
+      selected_group_col <- NULL
+      if (length(group_choices)) {
+        selected_group_col <- if (!is.null(input$group_col) && input$group_col %in% group_choices) input$group_col else group_choices[1]
       }
 
-      removeNotification(notification_id)
-    }, ignoreInit = TRUE)
+      updateSelectInput(session, "group_col", choices = group_choices, selected = selected_group_col)
+    })
 
-    output$user_plot <- renderPlot({
-      payload <- user_plot_payload()
-      if (is.null(payload)) return(NULL)
-
-      build_summary_plot(
-        payload$summary,
-        payload$group_col_name,
-        payload$selected,
-        exploded = isTRUE(user_exploded()),
-        raw_df = payload$raw,
-        raw_value_col = "score_value"
+    available_groups <- reactive({
+      plot_available_groups(
+        user_df = user_data(),
+        group_col_name = input$group_col,
+        ref_df = ref_data()
       )
     })
+
+    # Use observeEvent so input$selected_groups is read via isolate() and does
+    # not become a reactive dependency of this observer, which would create a
+    # feedback loop: user picks group → observer fires → updateSelectizeInput
+    # → input changes → observer fires again → flicker.
+    observeEvent(available_groups(), {
+      groups   <- available_groups()
+      current  <- isolate(input$selected_groups)
+      selected <- plot_normalize_group_selection(current, groups, target_n = 2L, allow_empty = FALSE)
+      updateSelectizeInput(session, "selected_groups", choices = groups, selected = selected, server = TRUE)
+    }, ignoreNULL = FALSE)
+
+    plot_layers <- reactive({
+      layers <- unique(plot_trim_non_empty(input$data_layers))
+      if (!length(layers)) {
+        return(character(0))
+      }
+      layers
+    })
+
+    plot_payload <- reactive({
+      plot_build_combined_payload(
+        user_df = user_data(),
+        scores = current_scores(),
+        group_col_name = input$group_col,
+        selected_groups = plot_normalize_group_selection(input$selected_groups, available_groups(), target_n = 2L, allow_empty = TRUE),
+        ref_df = ref_data(),
+        layers = plot_layers()
+      )
+    })
+
+    output$plot_status <- renderUI({
+      payload <- plot_payload()
+      if (!length(payload$status_messages)) {
+        return(NULL)
+      }
+
+      tagList(lapply(payload$status_messages, function(message) {
+        p(style = "color: #6b6b6b;", message)
+      }))
+    })
+
+    output$comparison_plot <- plotly::renderPlotly({
+      plot_build_plotly_figure(plot_payload())
+    })
+
+    list(
+      available_groups = available_groups,
+      plot_payload = plot_payload
+    )
   })
 }
