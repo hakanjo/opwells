@@ -1,0 +1,18 @@
+/* Language flag toggle styles */
+#language-toggle-flags {
+  user-select: none;
+}
+.flag-icon {
+  filter: grayscale(100%);
+  opacity: 0.6;
+  transition: filter 0.2s, opacity 0.2s;
+}
+.flag-icon.active {
+  filter: none;
+  opacity: 1;
+  border-radius: 3px;
+}
+.flag-icon.inactive:hover {
+  filter: grayscale(40%);
+  opacity: 0.85;
+}

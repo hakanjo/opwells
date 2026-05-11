@@ -1,9 +1,10 @@
-mod_likert_ui <- function(id) {
+mod_likert_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
+  tr <- function(key, ...) i18n_t(lang, key, ...)
 
   tagList(
-    h5("Beräkning av poäng"),
-    helpText("Klicka på kolumnnamn i förhandsgranskningen för att inkludera/exkludera dem från poängberäkningen."),
+    h5(tr("likert.ui.title")),
+    helpText(tr("likert.ui.help")),
     tags$style(HTML(
       paste(
         ".likert-preview-table { width: 100%; border-collapse: collapse; }",
@@ -16,14 +17,16 @@ mod_likert_ui <- function(id) {
       )
     )),
     uiOutput(ns("likert_preview_ui")),
-    actionButton(ns("compute_scores"), "Beräkna skalad poäng"),
+    actionButton(ns("compute_scores"), tr("likert.ui.compute")),
     uiOutput(ns("score_status"))
   )
 }
 
-mod_likert_server <- function(id, data, active_tab = NULL) {
+mod_likert_server <- function(id, data, active_tab = NULL, lang = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
+    tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
 
     scores <- reactiveVal(NULL)
     likert_cols_selected <- reactiveVal(character(0))
@@ -64,11 +67,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       warning_notification_id <- ns("score_status_warning")
       if (n_selected != 10) {
         showNotification(
-          paste0(
-            "Skalad poäng beräknades med ",
-            n_selected,
-            " valda kolumner. Exakt 10 kolumner rekommenderas."
-          ),
+          tr("likert.notif.recommend_10", n_selected),
           type = "warning",
           duration = 5,
           id = warning_notification_id
@@ -87,7 +86,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
 
       if (!has_likert_data()) {
         showNotification(
-          "Ingen användardata laddad. Ladda data i fliken Ladda data för att beräkna poäng.",
+          tr("likert.notif.no_data_tab"),
           type = "warning",
           duration = 3,
           id = notification_id
@@ -97,7 +96,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
 
       if (is.null(scores())) {
         showNotification(
-          "Klicka på en eller flera förhandsgranskningskolumner för att välja dem för beräkning.",
+          tr("likert.notif.select_columns"),
           type = "message",
           duration = 3,
           id = notification_id
@@ -119,7 +118,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       selected_cols <- likert_cols_selected()
 
       if (!is.null(scores())) {
-        preview[["Skalad poäng"]] <- scores()
+        preview[[tr("likert.preview.scaled_col")]] <- scores()
       }
 
       header_cells <- lapply(seq_along(data_cols), function(i) {
@@ -139,22 +138,25 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
         )
       })
 
-      if ("Skalad poäng" %in% names(preview)) {
-        header_cells <- c(header_cells, list(tags$th(class = "likert-score-col", "Skalad poäng")))
+      if (tr("likert.preview.scaled_col") %in% names(preview)) {
+        header_cells <- c(
+          header_cells,
+          list(tags$th(class = "likert-score-col", tr("likert.preview.scaled_col")))
+        )
       }
 
       body_rows <- lapply(seq_len(nrow(preview)), function(row_i) {
         row_cells <- lapply(seq_along(names(preview)), function(col_i) {
           col_nm <- names(preview)[[col_i]]
-          as_display_cell(preview[[col_i]][[row_i]], is_score_col = identical(col_nm, "Skalad poäng"))
+          as_display_cell(preview[[col_i]][[row_i]], is_score_col = identical(col_nm, tr("likert.preview.scaled_col")))
         })
         tags$tr(row_cells)
       })
 
       tagList(
         div(
-          tags$strong("Valda kolumner: "),
-          if (length(selected_cols)) paste(selected_cols, collapse = ", ") else "Ingen"
+          tags$strong(tr("likert.preview.selected_cols")),
+          if (length(selected_cols)) paste(selected_cols, collapse = ", ") else tr("likert.preview.none")
         ),
         br(),
         div(
@@ -189,13 +191,12 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       headers_changed <- is.null(old_cols) || !identical(old_cols, cols)
       auto_selected <- FALSE
 
-      # Keep only still-existing columns selected after upload/edit changes.
       selected_after_prune <- intersect(likert_cols_selected(), cols)
 
       if (headers_changed) {
         auto_cols <- cols[
           grepl("^OPWELLS", cols, ignore.case = TRUE) |
-          grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE) | 
+          grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE) |
           grepl("Q(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE)
         ]
         auto_selected <- length(auto_cols) > 0
@@ -224,7 +225,6 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
         }, ignoreInit = TRUE)
       })
 
-      # If scores were already computed, keep them in sync with edited/uploaded data.
       if (auto_selected && length(selected_cols) > 0) {
         compute_scores_with_feedback(current_data, selected_cols)
       } else if (had_scores && length(selected_cols) > 0) {
@@ -234,7 +234,6 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       }
     }, ignoreNULL = FALSE)
 
-    # Reset scores when selection changes to avoid stale values in preview.
     observeEvent(likert_cols_selected(), {
       if (isTRUE(skip_next_selection_reset())) {
         skip_next_selection_reset(FALSE)
@@ -249,7 +248,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       current_data <- data()
       if (!has_likert_data()) {
         showNotification(
-          "Ingen data laddad. Klistra in eller ladda upp data först.",
+          tr("likert.notif.no_data_compute"),
           type = "warning",
           duration = 3,
           id = ns("likert_no_data")
@@ -268,7 +267,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       }
 
       showNotification(
-        "\u2713 Skalad poäng beräknad och visad i förhandsgranskningstabellen.",
+        tr("likert.notif.success"),
         type = "message",
         duration = 3,
         id = notification_id
@@ -279,7 +278,7 @@ mod_likert_server <- function(id, data, active_tab = NULL) {
       if (has_likert_data() && !length(likert_cols_selected())) {
         div(
           class = "alert alert-info",
-          "Klicka på en eller flera förhandsgranskningskolumner för att välja dem för beräkning."
+          tr("likert.status.select_columns")
         )
       }
     })

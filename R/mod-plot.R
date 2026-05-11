@@ -3,12 +3,12 @@ plot_trim_non_empty <- function(x) {
   x_chr[!is.na(x_chr) & nzchar(x_chr)]
 }
 
-plot_total_group_label <- function() {
-  "Totalt"
+plot_total_group_label <- function(lang = i18n_default_language) {
+  i18n_t(lang, "plot.total_label")
 }
 
-plot_total_group_definition <- function() {
-  list(col = NA_character_, value = NA_character_, label = plot_total_group_label(), is_total = TRUE)
+plot_total_group_definition <- function(lang = i18n_default_language) {
+  list(col = NA_character_, value = NA_character_, label = plot_total_group_label(lang), is_total = TRUE)
 }
 
 plot_candidate_group_columns <- function(user_df, exclude_cols = character(0)) {
@@ -64,7 +64,6 @@ plot_normalize_group_selection <- function(selected, groups, target_n = 2L, allo
   unique(selected)
 }
 
-# Returns a named list: column name -> sorted unique values from that column.
 plot_column_groups <- function(user_df, exclude_cols = character(0)) {
   cols <- plot_candidate_group_columns(user_df, exclude_cols)
   if (!length(cols)) return(list())
@@ -73,7 +72,6 @@ plot_column_groups <- function(user_df, exclude_cols = character(0)) {
   result
 }
 
-# Keep only available and non-empty selections per current group columns.
 plot_sanitize_group_selections <- function(selections, col_groups) {
   if (!is.list(selections) || !length(col_groups)) {
     return(list())
@@ -99,10 +97,6 @@ plot_read_group_selections_from_input <- function(input, col_groups) {
   plot_sanitize_group_selections(selections, col_groups)
 }
 
-# Convert named selections (list(col = c(val,...))) into a list of group
-# definition records: list(col=, value=, label=).  Labels are the value string
-# unless the same value appears in more than one column, in which case they are
-# disambiguated as "col: value".
 plot_parse_group_definitions <- function(selections) {
   defs <- list()
   for (col in names(selections)) {
@@ -114,7 +108,7 @@ plot_parse_group_definitions <- function(selections) {
   if (!length(defs)) return(defs)
 
   all_values <- vapply(defs, `[[`, character(1), "value")
-  all_cols   <- vapply(defs, `[[`, character(1), "col")
+  all_cols <- vapply(defs, `[[`, character(1), "col")
   value_col_count <- tapply(all_cols, all_values, function(x) length(unique(x)))
   ambiguous <- names(value_col_count)[value_col_count > 1]
 
@@ -125,7 +119,7 @@ plot_parse_group_definitions <- function(selections) {
   })
 }
 
-plot_build_selected_group_definitions <- function(selections, combined_groups = list(), include_total = FALSE) {
+plot_build_selected_group_definitions <- function(selections, combined_groups = list(), include_total = FALSE, lang = i18n_default_language) {
   defs <- plot_parse_group_definitions(selections)
 
   if (length(combined_groups)) {
@@ -133,14 +127,12 @@ plot_build_selected_group_definitions <- function(selections, combined_groups = 
   }
 
   if (length(defs) && isTRUE(include_total)) {
-    defs <- c(list(plot_total_group_definition()), defs)
+    defs <- c(list(plot_total_group_definition(lang)), defs)
   }
 
   defs
 }
 
-# Create a combined group definition from a list of source group definitions.
-# A combined group represents rows that match ANY of the source group conditions.
 plot_create_combined_group <- function(source_defs, label) {
   list(
     is_combined = TRUE,
@@ -162,25 +154,19 @@ plot_layers_from_selection <- function(group_definitions, show_raw = FALSE) {
   "user"
 }
 
-# group_definitions: list of list(col=, value=, label=) produced by
-# plot_parse_group_definitions() or plot_create_combined_group(). Each entry
-# selects one group (simple or combined) for the plot.
-# Helper function to get row indices for a group definition (simple or combined)
 plot_get_group_indices <- function(user_df, group_def) {
   if (isTRUE(group_def$is_total)) {
     return(seq_len(nrow(user_df)))
   }
 
   if (isTRUE(group_def$is_combined)) {
-    # For combined groups, find rows matching ANY source group
     idx_list <- lapply(group_def$source_defs, function(src_def) {
       plot_get_group_indices(user_df, src_def)
     })
     return(sort(unique(unlist(idx_list))))
   }
 
-  # Simple group: single col/value pair
-  col   <- group_def$col
+  col <- group_def$col
   value <- group_def$value
 
   if (!(col %in% names(user_df))) {
@@ -191,7 +177,7 @@ plot_get_group_indices <- function(user_df, group_def) {
   which(row_vals == value)
 }
 
-plot_build_user_data <- function(user_df, scores, group_definitions) {
+plot_build_user_data <- function(user_df, scores, group_definitions, lang = i18n_default_language) {
   if (!is.data.frame(user_df) || nrow(user_df) == 0 || is.null(scores)) {
     return(list(summary = data.frame(), raw = data.frame()))
   }
@@ -202,7 +188,7 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
   score_values <- suppressWarnings(as.numeric(scores))
 
   summary_list <- lapply(group_definitions, function(gd) {
-    label    <- gd$label
+    label <- gd$label
     is_total <- isTRUE(gd$is_total)
 
     idx <- plot_get_group_indices(user_df, gd)
@@ -217,13 +203,13 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
         group_label = label,
         mean = NA_real_, sd = NA_real_, q_1_6 = NA_real_, q_5_6 = NA_real_,
         n = 0L, source = "user", is_total = is_total,
-        hover_text = sprintf("<b>%s</b><br>Inga giltiga poäng", label),
+        hover_text = i18n_t(lang, "plot.hover.no_valid", label),
         stringsAsFactors = FALSE
       ))
     }
 
     mean_value <- mean(x_clean)
-    q_low  <- as.numeric(stats::quantile(x_clean, probs = 1 / 6, na.rm = TRUE))
+    q_low <- as.numeric(stats::quantile(x_clean, probs = 1 / 6, na.rm = TRUE))
     q_high <- as.numeric(stats::quantile(x_clean, probs = 5 / 6, na.rm = TRUE))
 
     data.frame(
@@ -231,10 +217,7 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
       mean = mean_value, sd = stats::sd(x_clean),
       q_1_6 = q_low, q_5_6 = q_high, n = length(x_clean),
       source = "user", is_total = is_total,
-      hover_text = sprintf(
-        "<b>%s</b><br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f<br>Antal svar: %d",
-        label, mean_value, q_low, q_high, length(x_clean)
-      ),
+      hover_text = i18n_t(lang, "plot.hover.summary", label, mean_value, q_low, q_high, length(x_clean)),
       stringsAsFactors = FALSE
     )
   })
@@ -242,7 +225,7 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
   summary_data <- if (length(summary_list)) do.call(rbind, summary_list) else data.frame()
 
   raw_list <- lapply(group_definitions, function(gd) {
-    label    <- gd$label
+    label <- gd$label
     is_total <- isTRUE(gd$is_total)
 
     idx <- plot_get_group_indices(user_df, gd)
@@ -256,10 +239,7 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
     )
     df <- df[!is.na(df$score_value), , drop = FALSE]
     if (!nrow(df)) return(NULL)
-    df$hover_text <- sprintf(
-      "<b>%s</b><br>Rad: %d<br>Skalad poäng: %.1f",
-      df$group_label, df$row_id, df$score_value
-    )
+    df$hover_text <- i18n_t(lang, "plot.hover.raw", df$group_label, df$row_id, df$score_value)
     df
   })
   raw_list <- Filter(Negate(is.null), raw_list)
@@ -268,7 +248,7 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
   list(summary = summary_data, raw = raw_data)
 }
 
-plot_build_reference_data <- function(ref_df, selected_groups) {
+plot_build_reference_data <- function(ref_df, selected_groups, lang = i18n_default_language) {
   if (!is.data.frame(ref_df) || nrow(ref_df) == 0 || !all(c("group", "mean", "q_1_6", "q_5_6") %in% names(ref_df))) {
     return(data.frame())
   }
@@ -285,8 +265,9 @@ plot_build_reference_data <- function(ref_df, selected_groups) {
   }
 
   ref_df$source <- "reference"
-  ref_df$hover_text <- sprintf(
-    "<b>%s</b><br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f",
+  ref_df$hover_text <- i18n_t(
+    lang,
+    "plot.hover.reference",
     ref_df$group_label,
     suppressWarnings(as.numeric(ref_df$mean)),
     suppressWarnings(as.numeric(ref_df$q_1_6)),
@@ -296,17 +277,17 @@ plot_build_reference_data <- function(ref_df, selected_groups) {
   ref_df
 }
 
-plot_build_status_messages <- function(layers, user_df, scores, group_definitions, ref_summary) {
+plot_build_status_messages <- function(layers, user_df, scores, group_definitions, ref_summary, lang = i18n_default_language) {
   messages <- character(0)
 
   show_user <- "user" %in% layers || "raw" %in% layers
-  show_ref  <- "reference" %in% layers
+  show_ref <- "reference" %in% layers
 
   if (show_user) {
     if (!is.data.frame(user_df) || nrow(user_df) == 0) {
-      messages <- c(messages, "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att visa användardata.")
+      messages <- c(messages, i18n_t(lang, "plot.status.no_user_data"))
     } else if (is.null(scores)) {
-      messages <- c(messages, "Ingen skalad poäng beräknad för användardata.")
+      messages <- c(messages, i18n_t(lang, "plot.status.no_scores"))
     }
   }
 
@@ -319,16 +300,16 @@ plot_build_status_messages <- function(layers, user_df, scores, group_definition
   if (show_ref && length(selected_labels) && is.data.frame(ref_summary) && nrow(ref_summary) > 0) {
     missing_groups <- setdiff(selected_labels, unique(ref_summary$group_label))
     if (length(missing_groups)) {
-      messages <- c(messages, sprintf("Referensdata saknas för: %s", paste(missing_groups, collapse = ", ")))
+      messages <- c(messages, i18n_t(lang, "plot.status.missing_reference", paste(missing_groups, collapse = ", ")))
     }
   }
 
   unique(messages)
 }
 
-plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_df, layers) {
+plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_df, layers, lang = i18n_default_language) {
   layers <- unique(plot_trim_non_empty(layers))
-  user_data   <- list(summary = data.frame(), raw = data.frame())
+  user_data <- list(summary = data.frame(), raw = data.frame())
   ref_summary <- data.frame()
 
   selected_labels <- if (length(group_definitions)) {
@@ -338,11 +319,11 @@ plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_
   }
 
   if ("user" %in% layers || "raw" %in% layers) {
-    user_data <- plot_build_user_data(user_df, scores, group_definitions)
+    user_data <- plot_build_user_data(user_df, scores, group_definitions, lang = lang)
   }
 
   if ("reference" %in% layers) {
-    ref_summary <- plot_build_reference_data(ref_df, selected_labels)
+    ref_summary <- plot_build_reference_data(ref_df, selected_labels, lang = lang)
   }
 
   ordered_groups <- unique(c(selected_labels, user_data$summary$group_label, ref_summary$group_label, user_data$raw$group_label))
@@ -363,11 +344,12 @@ plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_
     ref_summary = ref_summary,
     ordered_groups = ordered_groups,
     status_messages = plot_build_status_messages(
-      layers           = layers,
-      user_df          = user_df,
-      scores           = scores,
+      layers = layers,
+      user_df = user_df,
+      scores = scores,
       group_definitions = group_definitions,
-      ref_summary      = ref_summary
+      ref_summary = ref_summary,
+      lang = lang
     )
   )
 }
@@ -398,7 +380,7 @@ plot_group_jitter <- function(n) {
   seq(-0.18, 0.18, length.out = n)
 }
 
-plot_build_plotly_figure <- function(payload) {
+plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
   present_groups <- payload$ordered_groups[payload$ordered_groups %in% unique(c(
     payload$user_summary$group_label,
     payload$ref_summary$group_label,
@@ -406,122 +388,117 @@ plot_build_plotly_figure <- function(payload) {
   ))]
 
   if (!length(present_groups)) {
-    return(plot_build_empty_figure("Ingen data att visa för det aktuella urvalet."))
+    return(plot_build_empty_figure(i18n_t(lang, "plot.empty.no_data")))
   }
 
   y_positions <- stats::setNames(seq_along(present_groups), present_groups)
 
-  # Pre-build batched data frames with resolved y positions so we can add each
-  # trace type once rather than per-group, avoiding the untyped orphan trace
-  # that results from loop-accumulating onto an empty plot_ly() base.
   user_plot <- data.frame()
-  ref_plot  <- data.frame()
-  raw_plot  <- data.frame()
+  ref_plot <- data.frame()
+  raw_plot <- data.frame()
 
   for (group_label in present_groups) {
     base_y <- unname(y_positions[[group_label]])
 
     ur <- payload$user_summary[payload$user_summary$group_label == group_label, , drop = FALSE]
     if (nrow(ur) > 0) {
-        ur$y_val  <- base_y
+      ur$y_val <- base_y
       user_plot <- rbind(user_plot, ur)
     }
 
     rr <- payload$ref_summary[payload$ref_summary$group_label == group_label, , drop = FALSE]
     if (nrow(rr) > 0) {
-        rr$y_val <- base_y
+      rr$y_val <- base_y
       ref_plot <- rbind(ref_plot, rr)
     }
 
     raw <- payload$user_raw[payload$user_raw$group_label == group_label, , drop = FALSE]
     if (nrow(raw) > 0) {
-        raw$y_value <- base_y + plot_group_jitter(nrow(raw))
-      raw_plot    <- rbind(raw_plot, raw)
+      raw$y_value <- base_y + plot_group_jitter(nrow(raw))
+      raw_plot <- rbind(raw_plot, raw)
     }
   }
 
   has_user <- nrow(user_plot) > 0
-  has_ref  <- nrow(ref_plot)  > 0
-  has_raw  <- nrow(raw_plot)  > 0
+  has_ref <- nrow(ref_plot) > 0
+  has_raw <- nrow(raw_plot) > 0
 
-  # Initialise with a typed, invisible base trace so Plotly never encounters an
-  # untyped trace and therefore never emits "no trace type specified" warnings.
   fig <- plotly::plot_ly(
-    type        = "scatter",
-    mode        = "none",
-    showlegend  = FALSE,
-    hoverinfo   = "none"
+    type = "scatter",
+    mode = "none",
+    showlegend = FALSE,
+    hoverinfo = "none"
   )
 
   if (has_user) {
     fig <- fig |>
       plotly::add_segments(
-        data      = user_plot,
-        x         = ~q_1_6,
-        xend      = ~q_5_6,
-        y         = ~y_val,
-        yend      = ~y_val,
-        line      = list(color = "#1f78b4", width = 4),
-        text      = ~hover_text,
+        data = user_plot,
+        x = ~q_1_6,
+        xend = ~q_5_6,
+        y = ~y_val,
+        yend = ~y_val,
+        line = list(color = "#1f78b4", width = 4),
+        text = ~hover_text,
         hoverinfo = "text",
         showlegend = FALSE,
-        inherit   = FALSE
+        inherit = FALSE
       ) |>
       plotly::add_markers(
-        data        = user_plot,
-        x           = ~mean,
-        y           = ~y_val,
-        marker      = list(color = "#1f78b4", size = 11, symbol = "circle"),
-        text        = ~hover_text,
-        hoverinfo   = "text",
-        name        = "Användardata",
+        data = user_plot,
+        x = ~mean,
+        y = ~y_val,
+        marker = list(color = "#1f78b4", size = 11, symbol = "circle"),
+        text = ~hover_text,
+        hoverinfo = "text",
+        name = i18n_t(lang, "plot.legend.user"),
         legendgroup = "user",
-        showlegend  = TRUE,
-        inherit     = FALSE
+        showlegend = TRUE,
+        inherit = FALSE
       )
   }
 
   if (has_ref) {
     fig <- fig |>
       plotly::add_segments(
-        data      = ref_plot,
-        x         = ~q_1_6,
-        xend      = ~q_5_6,
-        y         = ~y_val,
-        yend      = ~y_val,
-        line      = list(color = "#e07a2f", width = 4, dash = "dot"),
-        text      = ~hover_text,
+        data = ref_plot,
+        x = ~q_1_6,
+        xend = ~q_5_6,
+        y = ~y_val,
+        yend = ~y_val,
+        line = list(color = "#e07a2f", width = 4, dash = "dot"),
+        text = ~hover_text,
         hoverinfo = "text",
         showlegend = FALSE,
-        inherit   = FALSE
+        inherit = FALSE
       ) |>
       plotly::add_markers(
-        data        = ref_plot,
-        x           = ~mean,
-        y           = ~y_val,
-        marker      = list(color = "#e07a2f", size = 11, symbol = "diamond-open"),
-        text        = ~hover_text,
-        hoverinfo   = "text",
-        name        = "Referensdata",
+        data = ref_plot,
+        x = ~mean,
+        y = ~y_val,
+        marker = list(color = "#e07a2f", size = 11, symbol = "diamond-open"),
+        text = ~hover_text,
+        hoverinfo = "text",
+        name = i18n_t(lang, "plot.legend.reference"),
         legendgroup = "reference",
-        showlegend  = TRUE,
-        inherit     = FALSE
+        showlegend = TRUE,
+        inherit = FALSE
       )
   }
 
   if (has_raw) {
     fig <- fig |>
       plotly::add_markers(
-        data        = raw_plot,
-        x           = ~score_value,
-        y           = ~y_value,
-        marker      = list(color = "rgba(31,120,180,0.35)", size = 8, symbol = "circle-open"),
-        text        = ~hover_text,
-        hoverinfo   = "text",
-        name        = "Individuella datapunkter",
+        data = raw_plot,
+        x = ~score_value,
+        y = ~y_value,
+        marker = list(color = "rgba(31,120,180,0.35)", size = 8, symbol = "circle-open"),
+        text = ~hover_text,
+        hoverinfo = "text",
+        name = i18n_t(lang, "plot.legend.raw"),
         legendgroup = "raw",
-        showlegend  = TRUE,
-        inherit     = FALSE
+        showlegend = TRUE,
+        inherit = FALSE
       )
   }
 
@@ -547,7 +524,7 @@ plot_build_plotly_figure <- function(payload) {
       margin = list(l = 150, r = 40, t = 20, b = 80),
       annotations = list(
         list(
-          text = "Lägst välbefinnande",
+          text = i18n_t(lang, "plot.axis.low"),
           x = 0,
           y = 0,
           xref = "x",
@@ -557,7 +534,7 @@ plot_build_plotly_figure <- function(payload) {
           font = list(color = "#6b6b6b")
         ),
         list(
-          text = "Högst välbefinnande",
+          text = i18n_t(lang, "plot.axis.high"),
           x = 100,
           y = 0,
           xref = "x",
@@ -571,21 +548,22 @@ plot_build_plotly_figure <- function(payload) {
     plotly::config(displayModeBar = TRUE, responsive = TRUE)
 }
 
-mod_plot_ui <- function(id) {
+mod_plot_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
+  tr <- function(key, ...) i18n_t(lang, key, ...)
 
   tagList(
     br(),
     fluidRow(
       column(
         width = 3,
-        p("När inga grupper är valda visas referensdata. När en eller flera grupper väljs visas användardata. Håll pekaren över punkter eller sammanfattningar för detaljer."),
+        p(tr("plot.ui.left_intro")),
         uiOutput(ns("group_selectors")),
         hr(),
-        p(strong("Kombinera grupper"), style = "margin-top: 20px;"),
-        p("Välj ett namn och klicka på 'Lägg till kombinerad grupp' för att kombinera de valda grupperna.", style = "font-size: 0.9em; color: #6b6b6b;"),
-        textInput(ns("combined_group_label"), label = "Namn på kombinerad grupp", placeholder = "T.ex. 'Kvinnor 2024-2025'"),
-        actionButton(ns("add_combined_group"), "Lägg till kombinerad grupp", class = "btn-primary"),
+        p(strong(tr("plot.ui.combine.title")), style = "margin-top: 20px;"),
+        p(tr("plot.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
+        textInput(ns("combined_group_label"), label = tr("plot.ui.combine.label"), placeholder = tr("plot.ui.combine.placeholder")),
+        actionButton(ns("add_combined_group"), tr("plot.ui.combine.add"), class = "btn-primary"),
         uiOutput(ns("combined_groups_list")),
         hr(),
         uiOutput(ns("include_total_toggle")),
@@ -594,15 +572,18 @@ mod_plot_ui <- function(id) {
       ),
       column(
         width = 9,
-        p("Sammanfattningsmarkören visar gruppens medelvärde. Linjen visar spannet där ungefär två tredjedelar av svaren ligger. Referensdata visas med separat symbol och linjestil."),
+        p(tr("plot.ui.right_intro")),
         plotly::plotlyOutput(ns("comparison_plot"), height = "calc(95vh - 280px)")
       )
     )
   )
 }
 
-mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, group_state = NULL, active_tab = NULL) {
+mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, group_state = NULL, active_tab = NULL, lang = NULL) {
   moduleServer(id, function(input, output, session) {
+    resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
+    tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
+
     current_scores <- reactive({
       if (is.null(scores)) {
         return(NULL)
@@ -661,13 +642,13 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       groups <- col_groups()
       for (col in names(groups)) {
         input_id <- paste0("grp_", col)
-        choices  <- groups[[col]]
+        choices <- groups[[col]]
         current <- if (use_shared_group_state) {
           selected_group_selections()[[col]]
         } else {
           isolate(input[[input_id]])
         }
-        valid    <- current[current %in% choices]
+        valid <- current[current %in% choices]
 
         current_input <- isolate(input[[input_id]])
         current_norm <- sort(unique(plot_trim_non_empty(current_input)))
@@ -686,7 +667,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       groups <- col_groups()
       ns <- session$ns
       if (!length(groups)) {
-        return(p("Ladda data för att välja grupper.", style = "color: #6b6b6b;"))
+        return(p(tr("plot.ui.load_data_for_groups"), style = "color: #6b6b6b;"))
       }
       lapply(names(groups), function(col) {
         selectizeInput(
@@ -704,47 +685,42 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       plot_build_selected_group_definitions(
         selections = selected_group_selections(),
         combined_groups = get_combined_groups(),
-        include_total = current_include_total()
+        include_total = current_include_total(),
+        lang = resolved_lang()
       )
     })
 
-    # Observer for adding combined groups
     observeEvent(input$add_combined_group, {
       label <- trimws(input$combined_group_label)
       if (!nzchar(label)) {
-        showNotification("Ange ett namn för den kombinerade gruppen", type = "warning")
+        showNotification(tr("plot.notif.enter_name"), type = "warning")
         return()
       }
 
       current_selections <- selected_group_selections()
 
       if (!length(current_selections)) {
-        showNotification("Välj minst en grupp för att kombinera", type = "warning")
+        showNotification(tr("plot.notif.select_at_least_one"), type = "warning")
         return()
       }
 
-      # Parse selected groups into group definitions
       source_defs <- plot_parse_group_definitions(current_selections)
 
       if (!length(source_defs)) {
-        showNotification("Kunde inte skapa kombinerad grupp", type = "error")
+        showNotification(tr("plot.notif.create_failed"), type = "error")
         return()
       }
 
-      # Create the combined group definition
       combined_group <- plot_create_combined_group(source_defs, label)
 
-      # Add it to the list of combined groups
       current_combined <- get_combined_groups()
       set_combined_groups(c(current_combined, list(combined_group)))
 
-      # Clear the input field
       updateTextInput(session, "combined_group_label", value = "")
 
-      showNotification(sprintf("Kombinerad grupp '%s' skapad!", label), type = "message")
+      showNotification(tr("plot.notif.created", label), type = "message")
     })
 
-    # Track button IDs that already have observers to avoid duplicates
     created_observers <- reactiveVal(character(0))
 
     output$combined_groups_list <- renderUI({
@@ -755,18 +731,17 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
 
       ns <- session$ns
       tagList(
-        p(strong(sprintf("Kombinerade grupper (%d)", length(combined))), style = "margin-top: 15px; margin-bottom: 5px;"),
+        p(strong(tr("plot.ui.combined_count", length(combined))), style = "margin-top: 15px; margin-bottom: 5px;"),
         lapply(seq_along(combined), function(i) {
           group <- combined[[i]]
           label <- group$label
-          # Create a sanitized ID based on the label
           safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
           tags$div(
             style = "background-color: #f5f5f5; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;",
             tags$span(label),
             actionButton(
               ns(paste0("remove_combined_group_", safe_id)),
-              "Ta bort",
+              tr("plot.ui.remove"),
               class = "btn-sm btn-default",
               style = "margin: 0;"
             )
@@ -775,7 +750,6 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       )
     })
 
-    # Create observers for remove buttons, ensuring each button only gets one observer
     observe({
       combined <- get_combined_groups()
       if (!length(combined)) {
@@ -786,10 +760,8 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         paste0("remove_combined_group_", gsub("[^a-zA-Z0-9_]", "_", g$label))
       }, character(1))
 
-      # Get list of already-created observers
       existing <- created_observers()
 
-      # Create new observers only for buttons we haven't seen before
       for (i in seq_along(combined)) {
         label <- combined[[i]]$label
         safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
@@ -807,12 +779,11 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
               if (length(idx) > 0) {
                 removed_label <- current_combined[[idx[1]]]$label
                 set_combined_groups(current_combined[-idx[1]])
-                showNotification(sprintf("Kombinerad grupp '%s' borttagen", removed_label), type = "message")
+                showNotification(tr("plot.notif.removed", removed_label), type = "message")
               }
             }, ignoreInit = TRUE)
           })
 
-          # Add this button ID to the set of created observers
           created_observers(c(created_observers(), button_id))
         }
       }
@@ -825,7 +796,6 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         length(plot_trim_non_empty(selections[[col]])) > 0
       }, logical(1)))
 
-      # Show toggle if there's either a basic group selection or combined groups
       has_combined <- length(get_combined_groups()) > 0
 
       if (!has_selection && !has_combined) {
@@ -836,7 +806,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
 
       checkboxInput(
         session$ns("include_total"),
-        label = "Inkludera totalt",
+        label = tr("plot.ui.include_total"),
         value = isTRUE(current_value)
       )
     })
@@ -850,7 +820,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
 
       checkboxInput(
         session$ns("show_raw_points"),
-        label = "Visa individuella datapunkter",
+        label = tr("plot.ui.show_raw"),
         value = isTRUE(current_value)
       )
     })
@@ -864,11 +834,12 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
 
     plot_payload <- reactive({
       plot_build_combined_payload(
-        user_df           = user_data(),
-        scores            = current_scores(),
+        user_df = user_data(),
+        scores = current_scores(),
         group_definitions = group_definitions(),
-        ref_df            = ref_data(),
-        layers            = plot_layers()
+        ref_df = ref_data(),
+        layers = plot_layers(),
+        lang = resolved_lang()
       )
     })
 
@@ -884,7 +855,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     output$comparison_plot <- plotly::renderPlotly({
-      plot_build_plotly_figure(plot_payload())
+      plot_build_plotly_figure(plot_payload(), lang = resolved_lang())
     })
 
     list(

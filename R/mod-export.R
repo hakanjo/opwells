@@ -1,18 +1,21 @@
-mod_export_ui <- function(id) {
+mod_export_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
+  tr <- function(key, ...) i18n_t(lang, key, ...)
 
   tagList(
-    h5("Export av resultat"),
-    helpText("Ladda ner användardata med kolumnen 'Skalad po\u00e4ng', automatiskt ber\u00e4knad fr\u00e5n uppladdad fil."),
-    downloadButton(ns("download_scores"), "Ladda ner resultattabell (.csv)"),
-    downloadButton(ns("download_scores_xlsx"), "Ladda ner resultattabell (.xlsx)"),
+    h5(tr("export.ui.title")),
+    helpText(tr("export.ui.help")),
+    downloadButton(ns("download_scores"), tr("export.ui.download_csv")),
+    downloadButton(ns("download_scores_xlsx"), tr("export.ui.download_xlsx")),
     uiOutput(ns("export_status"))
   )
 }
 
-mod_export_server <- function(id, data, likert_state, active_tab = NULL) {
+mod_export_server <- function(id, data, likert_state, active_tab = NULL, lang = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
+    tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
 
     current_selected_columns <- reactive({
       state <- likert_state()
@@ -52,7 +55,7 @@ mod_export_server <- function(id, data, likert_state, active_tab = NULL) {
       }
 
       result_df <- current_data
-      result_df[["Skalad poäng"]] <- current_scores
+      result_df[[tr("export.column.scaled_score")]] <- current_scores
       result_df
     }
 
@@ -73,7 +76,7 @@ mod_export_server <- function(id, data, likert_state, active_tab = NULL) {
       content = function(file) {
         result_df <- result_table_for_download()
         validate(
-          need(requireNamespace("writexl", quietly = TRUE), "Paketet 'writexl' krävs för xlsx-export.")
+          need(requireNamespace("writexl", quietly = TRUE), tr("export.validation.writexl"))
         )
 
         writexl::write_xlsx(result_df, path = file)
@@ -90,7 +93,7 @@ mod_export_server <- function(id, data, likert_state, active_tab = NULL) {
 
         if (!has_export_data()) {
           showNotification(
-            "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att kunna exportera.",
+            tr("export.notif.no_data"),
             type = "warning",
             duration = 3,
             id = notification_id
@@ -100,7 +103,7 @@ mod_export_server <- function(id, data, likert_state, active_tab = NULL) {
 
         if (!length(current_selected_columns())) {
           showNotification(
-            "Inga OPWELLS/fr\u00e5gefr\u00e5gor hittades i den uppladdade filen. Export kommer att inneh\u00e5lla originaldata utan skalad po\u00e4ng.",
+            tr("export.notif.no_cols"),
             type = "message",
             duration = 4,
             id = notification_id
@@ -114,18 +117,18 @@ mod_export_server <- function(id, data, likert_state, active_tab = NULL) {
 
     output$export_status <- renderUI({
       if (!has_export_data()) {
-        return(div(class = "alert alert-info", "Ladda upp data först för att aktivera export."))
+        return(div(class = "alert alert-info", tr("export.status.no_data")))
       }
 
       if (!length(current_selected_columns())) {
-        return(div(class = "alert alert-warning", "Inga OPWELLS/fr\u00e5gefr\u00e5gor hittades i filen. Exporten inneh\u00e5ller originaldata utan skalad po\u00e4ng."))
+        return(div(class = "alert alert-warning", tr("export.status.no_cols")))
       }
 
       if (is.null(current_scaled_scores())) {
-        return(div(class = "alert alert-info", "Skalad po\u00e4ng ber\u00e4knas automatiskt vid uppladdning av fil med matchande kolumnnamn."))
+        return(div(class = "alert alert-info", tr("export.status.pending")))
       }
 
-      div(class = "alert alert-success", "Exporten inkluderar aktuell skalad poäng.")
+      div(class = "alert alert-success", tr("export.status.ready"))
     })
   })
 }

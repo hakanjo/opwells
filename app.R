@@ -13,65 +13,108 @@ file_list <- list.files(
 for (file in file_list) { source(file) }
 
 ui <- fluidPage(
-  titlePanel("Äldres välbefinnande – OPWELLS"),
-  tags$div(
-    style = "margin: 16px 0 20px 0;",
-    tags$ul(
-      tags$li("OPWELLS är en enkät baserad på 10 frågor för att mäta äldres välbefinnande. OPWELLS är en förkortning för enkätens engelska benämning, Older Persons Wellbeing Scale."),
-      tags$li("Denna webbapplikation möjliggör att ta fram mått på välbefinnande från individers enkätsvar."),
-      tags$li("Webbapplikationen möjliggör också illustrationer och statistiska jämförelser inom ditt dataset samt mot referenspopulationen*"),
-      tags$li("Nedan kan du ladda upp dina enkätsvar tillsammans med ytterligare variabler som du vill kunna göra jämförelser för."),
-      tags$li(
-        "OPWELLS och webbapplikationen är framtagna inom ramen för projektet Mätning av äldres välbefinnande och har finansierats av Familjen Kamprads Stiftelse. Om du har frågor om OPWELLS kan du antingen läsa mer här ",
-        tags$a("länk till Q&A", href = "#"),
-        " eller kontakta ",
-        tags$a("jeanette.melin@lnu.se", href = "mailto:jeanette.melin@lnu.se"),
-        "."
-      )
-    ),
-    tags$p(
-      tags$em("*Referensgruppen består av de äldre som under utvecklingen av OPWELLS deltog. De kommer från nio svenska projektparts- och samverkanskommuner.")
-    )
-  ),
-  tabsetPanel(
-    id = "main_tab",
-    tabPanel(
-      "Ladda upp data",
-      value = "data_input",
-      mod_data_input_ui("data_input")
-    ),
-    tabPanel(
-      "Illustrationer",
-      value = "plot",
-      mod_plot_ui("plot")
-    ),
-    tabPanel(
-      "Statistiska jämförelser",
-      value = "statistics",
-      mod_statistics_ui("statistics")
-    ),
-    tabPanel(
-      "Exporter",
-      value = "export",
-      mod_export_ui("export")
-    )
-  )
+  tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "css/flags.css")),
+  uiOutput("app_ui")
 )
 
 server <- function(input, output, session) {
-  data_input_r <- mod_data_input_server("data_input")
+  current_language <- reactive({
+    i18n_normalize_language(input$app_language)
+  })
+
+  output$app_ui <- renderUI({
+    lang <- current_language()
+    tr <- function(key, ...) i18n_t(lang, key, ...)
+
+    tagList(
+      titlePanel(
+        div(
+          style = "display: flex; justify-content: space-between; align-items: center;",
+          tr("app.title"),
+          div(
+            id = "language-toggle-flags",
+            style = "display: flex; gap: 8px;",
+            lapply(i18n_supported_languages, function(l) {
+              flag_src <- switch(l,
+                "sv" = "sv_flag.svg", # Place these SVGs in www/
+                "en" = "gb_flag.svg"
+              )
+              tags$img(
+                src = flag_src, # Removed 'www/' prefix
+                class = paste0("flag-icon", if (lang == l) " active" else " inactive"),
+                style = "width: 32px; height: 22px; cursor: pointer;",
+                onclick = sprintf("Shiny.setInputValue('app_language', '%s', {priority: 'event'})", l),
+                title = i18n_locales[[l]][[paste0('lang.', ifelse(l == 'sv', 'swedish', 'english'))]]
+              )
+            })
+          )
+        )
+      ),
+      tags$div(
+        style = "margin: 16px 0 20px 0;",
+        tags$ul(
+          tags$li(tr("app.intro.li1")),
+          tags$li(tr("app.intro.li2")),
+          tags$li(tr("app.intro.li3")),
+          tags$li(tr("app.intro.li4")),
+          tags$li(
+            tr("app.intro.project_prefix"),
+            tags$a(tr("app.intro.qa_link"), href = "#"),
+            tr("app.intro.or_contact"),
+            tags$a("jeanette.melin@lnu.se", href = "mailto:jeanette.melin@lnu.se"),
+            "."
+          )
+        ),
+        tags$p(
+          tags$em(tr("app.intro.ref_note"))
+        )
+      ),
+      tabsetPanel(
+        id = "main_tab",
+        tabPanel(
+          tr("app.tab.data_input"),
+          value = "data_input",
+          mod_data_input_ui("data_input", lang = lang)
+        ),
+        tabPanel(
+          tr("app.tab.plot"),
+          value = "plot",
+          mod_plot_ui("plot", lang = lang)
+        ),
+        tabPanel(
+          tr("app.tab.statistics"),
+          value = "statistics",
+          mod_statistics_ui("statistics", lang = lang)
+        ),
+        tabPanel(
+          tr("app.tab.export"),
+          value = "export",
+          mod_export_ui("export", lang = lang)
+        )
+      )
+    )
+  })
+
+  data_input_r <- mod_data_input_server("data_input", lang = current_language)
   data_r <- data_input_r$data
   likert_state_r <- data_input_r$likert_state
 
   shared_group_state <- create_group_selection_state()
 
-  mod_export_server("export", data = data_r, likert_state = likert_state_r, active_tab = reactive(input$main_tab))
+  mod_export_server(
+    "export",
+    data = data_r,
+    likert_state = likert_state_r,
+    active_tab = reactive(input$main_tab),
+    lang = current_language
+  )
   mod_statistics_server(
     "statistics",
     data = data_r,
     likert_state = likert_state_r,
     active_tab = reactive(input$main_tab),
-    group_state = shared_group_state
+    group_state = shared_group_state,
+    lang = current_language
   )
   mod_plot_server(
     "plot",
@@ -79,7 +122,8 @@ server <- function(input, output, session) {
     scores = likert_state_r,
     item_cols = likert_state_r,
     group_state = shared_group_state,
-    active_tab = reactive(input$main_tab)
+    active_tab = reactive(input$main_tab),
+    lang = current_language
   )
 }
 

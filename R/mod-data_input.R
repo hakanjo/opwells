@@ -1,20 +1,21 @@
-mod_data_input_ui <- function(id) {
+mod_data_input_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
+  tr <- function(key, ...) i18n_t(lang, key, ...)
 
   tagList(
     helpText(
-      "Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).",
+      tr("data_input.help.main"),
       tags$br(), tags$br(),
-      "Din fil f\u00f6r uppladdning ska inneh\u00e5lla varsin kolumn f\u00f6r respektive OPWELLS-fr\u00e5ga som ben\u00e4mns OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2 etc. D\u00e4rtill kan du ladda upp ytterligare variabler f\u00f6r de gruppj\u00e4mf\u00f6relser du vill g\u00f6ra, exempelvis tidpunkt, k\u00f6n, \u00e5ldersgrupp.",
+      tr("data_input.help.format"),
       tags$br(), tags$br(),
-      "Anv\u00e4nd g\u00e4rna denna mall f\u00f6r ditt data ",
-      downloadLink(ns("download_template"), "l\u00e4nk .xlsx"),
+      tr("data_input.help.template_prefix"),
+      downloadLink(ns("download_template"), tr("data_input.help.template_link")),
       tags$br(), tags$br(),
-      "T\u00e4nk p\u00e5 att inte ladda upp personuppgifter."
+      tr("data_input.help.privacy")
     ),
     fileInput(
       ns("upload_file"),
-      "Ladda upp datafil:",
+      tr("data_input.upload.label"),
       accept = c(".xlsx", ".csv", ".tsv", ".txt")
     ),
     uiOutput(ns("delimiter_ui")),
@@ -22,9 +23,11 @@ mod_data_input_ui <- function(id) {
   )
 }
 
-mod_data_input_server <- function(id) {
+mod_data_input_server <- function(id, lang = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
+    tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
 
     default_column_names <- function(n_cols) {
       vapply(seq_len(n_cols), function(idx) {
@@ -170,7 +173,6 @@ mod_data_input_server <- function(id) {
       }
     )
 
-    # ---- reactives ----
     current_data <- reactiveVal(data.frame())
     selected_cols <- reactiveVal(character(0))
     scores <- reactiveVal(NULL)
@@ -190,8 +192,16 @@ mod_data_input_server <- function(id) {
 
       selectInput(
         ns("delimiter"),
-        "Avg\u00e4nsare",
-        choices = c("Automatisk" = "auto", "Komma (CSV)" = ",", "Tab (TSV)" = "\t", "Semikolon" = ";"),
+        tr("data_input.delimiter.label"),
+        choices = stats::setNames(
+          c("auto", ",", "\t", ";"),
+          c(
+            tr("data_input.delimiter.auto"),
+            tr("data_input.delimiter.comma"),
+            tr("data_input.delimiter.tab"),
+            tr("data_input.delimiter.semicolon")
+          )
+        ),
         selected = delimiter_choice()
       )
     })
@@ -199,7 +209,7 @@ mod_data_input_server <- function(id) {
     load_file <- function(file_info, delimiter) {
       ext <- tolower(tools::file_ext(file_info$name))
       validate(
-        need(ext %in% c("xlsx", "csv", "tsv", "txt"), "V\u00e4nligen ladda upp xlsx-, csv-, eller tsv-/txt-filer.")
+        need(ext %in% c("xlsx", "csv", "tsv", "txt"), tr("data_input.validation.file_type"))
       )
 
       parsed <- tryCatch(
@@ -208,7 +218,7 @@ mod_data_input_server <- function(id) {
       )
 
       validate(
-        need(!is.null(parsed) && ncol(parsed$data) > 0, "Kunde inte analysera den uppladdade filen.")
+        need(!is.null(parsed) && ncol(parsed$data) > 0, tr("data_input.validation.parse_fail"))
       )
 
       df <- trim_empty_rows_cols(parsed$data)
@@ -257,21 +267,15 @@ mod_data_input_server <- function(id) {
       if (!length(sel)) {
         return(div(
           class = "alert alert-warning",
-          "Inga OPWELLS/F1\u201310/Q1\u201310-kolumner hittades. Po\u00e4ng kan inte ber\u00e4knas automatiskt."
+          tr("data_input.status.no_cols")
         ))
       }
 
       n <- length(sel)
       msg <- if (n == 10) {
-        paste0(
-          "\u2713 Skalad po\u00e4ng ber\u00e4knad fr\u00e5n ", n,
-          " kolumner: ", paste(sel, collapse = ", "), "."
-        )
+        tr("data_input.status.score_exact", n, paste(sel, collapse = ", "))
       } else {
-        paste0(
-          "Skalad po\u00e4ng ber\u00e4knad fr\u00e5n ", n,
-          " kolumner (exakt 10 rekommenderas): ", paste(sel, collapse = ", "), "."
-        )
+        tr("data_input.status.score_nonexact", n, paste(sel, collapse = ", "))
       }
 
       div(

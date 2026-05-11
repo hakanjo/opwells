@@ -1,36 +1,40 @@
-mod_statistics_ui <- function(id) {
+mod_statistics_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
+  tr <- function(key, ...) i18n_t(lang, key, ...)
 
   tagList(
     br(),
-    h5("Statistiska jämförelser för användardata"),
-    helpText("För varje kategori visas medel, median, standardavvikelse och tvåtredjedelsintervall (16,7:e till 83,3:e percentilen). Parvisa gruppjämförelser visas under tabellen."),
+    h5(tr("stats.ui.title")),
+    helpText(tr("stats.ui.help")),
     fluidRow(
       column(
         width = 4,
-        p("Välj en eller flera grupper i en eller flera kolumner. Valda grupper jämförs mot varandra i tabellerna till höger."),
+        p(tr("stats.ui.left_intro")),
         uiOutput(ns("group_selectors")),
         hr(),
-        p(strong("Kombinera grupper"), style = "margin-top: 20px;"),
-        p("Välj ett namn och klicka på 'Lägg till kombinerad grupp' för att kombinera de valda grupperna.", style = "font-size: 0.9em; color: #6b6b6b;"),
-        textInput(ns("combined_group_label"), label = "Namn på kombinerad grupp", placeholder = "T.ex. 'Kvinnor 2024-2025'"),
-        actionButton(ns("add_combined_group"), "Lägg till kombinerad grupp", class = "btn-primary"),
+        p(strong(tr("stats.ui.combine.title")), style = "margin-top: 20px;"),
+        p(tr("stats.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
+        textInput(ns("combined_group_label"), label = tr("stats.ui.combine.label"), placeholder = tr("stats.ui.combine.placeholder")),
+        actionButton(ns("add_combined_group"), tr("stats.ui.combine.add"), class = "btn-primary"),
         uiOutput(ns("combined_groups_list")),
         uiOutput(ns("include_total_toggle"))
       ),
       column(
         width = 8,
-        h4("Deskriptiv statistik per kategori"),
+        h4(tr("stats.ui.summary_title")),
         uiOutput(ns("summary_statistics_ui")),
-        h4("Parvisa jämförelser mellan grupper"),
+        h4(tr("stats.ui.pairwise_title")),
         uiOutput(ns("pairwise_statistics_ui"))
       )
     )
   )
 }
 
-mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_tab = NULL, group_state = NULL) {
+mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_tab = NULL, group_state = NULL, lang = NULL) {
   moduleServer(id, function(input, output, session) {
+    resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
+    tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
+
     column_groups <- reactive({
       user_df <- if (is.null(data)) NULL else data()
       state <- current_likert_state()
@@ -59,17 +63,18 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       plot_build_selected_group_definitions(
         selections = selected_group_selections(),
         combined_groups = get_combined_groups(),
-        include_total = current_include_total()
+        include_total = current_include_total(),
+        lang = resolved_lang()
       )
     })
 
     format_num <- function(x, digits = 2) {
-      ifelse(is.na(x), "", format(round(x, digits), nsmall = digits, trim = TRUE))
+      ifelse(is.na(x), "", i18n_format_number(x, resolved_lang(), digits = digits))
     }
 
     build_table <- function(df) {
       if (!is.data.frame(df) || nrow(df) == 0 || ncol(df) == 0) {
-        return(tags$p("Ingen statistik tillgänglig."))
+        return(tags$p(tr("stats.table.no_data")))
       }
 
       header_cells <- lapply(names(df), tags$th)
@@ -136,7 +141,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     output$group_selectors <- renderUI({
       col_groups <- column_groups()
       if (!length(col_groups)) {
-        return(p("Ladda data för att välja grupper.", style = "color: #6b6b6b;"))
+        return(p(tr("stats.ui.load_data_for_groups"), style = "color: #6b6b6b;"))
       }
 
       lapply(names(col_groups), function(col_nm) {
@@ -154,19 +159,19 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     observeEvent(input$add_combined_group, {
       label <- trimws(input$combined_group_label)
       if (!nzchar(label)) {
-        showNotification("Ange ett namn för den kombinerade gruppen", type = "warning")
+        showNotification(tr("plot.notif.enter_name"), type = "warning")
         return()
       }
 
       current_selections <- selected_group_selections()
       if (!length(current_selections)) {
-        showNotification("Välj minst en grupp för att kombinera", type = "warning")
+        showNotification(tr("plot.notif.select_at_least_one"), type = "warning")
         return()
       }
 
       source_defs <- plot_parse_group_definitions(current_selections)
       if (!length(source_defs)) {
-        showNotification("Kunde inte skapa kombinerad grupp", type = "error")
+        showNotification(tr("plot.notif.create_failed"), type = "error")
         return()
       }
 
@@ -175,7 +180,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       set_combined_groups(c(current_combined, list(combined_group)))
 
       updateTextInput(session, "combined_group_label", value = "")
-      showNotification(sprintf("Kombinerad grupp '%s' skapad!", label), type = "message")
+      showNotification(tr("plot.notif.created", label), type = "message")
     })
 
     created_observers <- reactiveVal(character(0))
@@ -188,7 +193,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       ns <- session$ns
       tagList(
-        p(strong(sprintf("Kombinerade grupper (%d)", length(combined))), style = "margin-top: 15px; margin-bottom: 5px;"),
+        p(strong(tr("stats.ui.combined_count", length(combined))), style = "margin-top: 15px; margin-bottom: 5px;"),
         lapply(seq_along(combined), function(i) {
           group <- combined[[i]]
           label <- group$label
@@ -199,7 +204,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
             tags$span(label),
             actionButton(
               ns(paste0("remove_combined_group_", safe_id)),
-              "Ta bort",
+              tr("stats.ui.remove"),
               class = "btn-sm btn-default",
               style = "margin: 0;"
             )
@@ -233,7 +238,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
               if (length(idx) > 0) {
                 removed_label <- current_combined[[idx[1]]]$label
                 set_combined_groups(current_combined[-idx[1]])
-                showNotification(sprintf("Kombinerad grupp '%s' borttagen", removed_label), type = "message")
+                showNotification(tr("plot.notif.removed", removed_label), type = "message")
               }
             }, ignoreInit = TRUE)
           })
@@ -258,7 +263,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       checkboxInput(
         session$ns("include_total"),
-        label = "Inkludera totalt",
+        label = tr("stats.ui.include_total"),
         value = current_include_total()
       )
     })
@@ -316,24 +321,34 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       rows <- lapply(groups, function(g) {
         x <- df$score[df$group == g]
         data.frame(
-          Kategori = g,
-          N = length(x),
-          Medel = mean(x),
-          Median = stats::median(x),
-          SD = stats::sd(x),
-          `2/3 nedre` = as.numeric(stats::quantile(x, probs = 1 / 6, na.rm = TRUE, names = FALSE)),
-          `2/3 övre` = as.numeric(stats::quantile(x, probs = 5 / 6, na.rm = TRUE, names = FALSE)),
-          stringsAsFactors = FALSE,
-          check.names = FALSE
+          category = g,
+          n = length(x),
+          mean = mean(x),
+          median = stats::median(x),
+          sd = stats::sd(x),
+          range_low = as.numeric(stats::quantile(x, probs = 1 / 6, na.rm = TRUE, names = FALSE)),
+          range_high = as.numeric(stats::quantile(x, probs = 5 / 6, na.rm = TRUE, names = FALSE)),
+          stringsAsFactors = FALSE
         )
       })
 
       out <- do.call(rbind, rows)
-      out$Medel <- format_num(out$Medel)
-      out$Median <- format_num(out$Median)
-      out$SD <- format_num(out$SD)
-      out$`2/3 nedre` <- format_num(out$`2/3 nedre`)
-      out$`2/3 övre` <- format_num(out$`2/3 övre`)
+      out$mean <- format_num(out$mean)
+      out$median <- format_num(out$median)
+      out$sd <- format_num(out$sd)
+      out$range_low <- format_num(out$range_low)
+      out$range_high <- format_num(out$range_high)
+
+      names(out) <- c(
+        tr("stats.summary.col.category"),
+        tr("stats.summary.col.n"),
+        tr("stats.summary.col.mean"),
+        tr("stats.summary.col.median"),
+        tr("stats.summary.col.sd"),
+        tr("stats.summary.col.range_low"),
+        tr("stats.summary.col.range_high")
+      )
+
       out
     })
 
@@ -353,20 +368,29 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         x2 <- df$score[df$group == g2]
 
         data.frame(
-          `Grupp 1` = g1,
-          `Grupp 2` = g2,
-          N1 = length(x1),
-          N2 = length(x2),
-          `Skillnad i medel` = mean(x1) - mean(x2),
-          `Skillnad i median` = stats::median(x1) - stats::median(x2),
-          stringsAsFactors = FALSE,
-          check.names = FALSE
+          group_1 = g1,
+          group_2 = g2,
+          n1 = length(x1),
+          n2 = length(x2),
+          mean_diff = mean(x1) - mean(x2),
+          median_diff = stats::median(x1) - stats::median(x2),
+          stringsAsFactors = FALSE
         )
       })
 
       out <- do.call(rbind, rows)
-      out$`Skillnad i medel` <- format_num(out$`Skillnad i medel`)
-      out$`Skillnad i median` <- format_num(out$`Skillnad i median`)
+      out$mean_diff <- format_num(out$mean_diff)
+      out$median_diff <- format_num(out$median_diff)
+
+      names(out) <- c(
+        tr("stats.pairwise.col.group1"),
+        tr("stats.pairwise.col.group2"),
+        tr("stats.pairwise.col.n1"),
+        tr("stats.pairwise.col.n2"),
+        tr("stats.pairwise.col.mean_diff"),
+        tr("stats.pairwise.col.median_diff")
+      )
+
       out
     })
 
@@ -381,7 +405,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
         showNotification(
-          "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att visa jämförelser.",
+          tr("stats.notif.no_data"),
           type = "warning",
           duration = 3,
           id = notification_id
@@ -391,7 +415,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       if (is.null(state) || is.null(state$scaled_scores)) {
         showNotification(
-          "Skalad poäng saknas. Beräkna poäng i dataflödet för att visa statistiska jämförelser.",
+          tr("stats.notif.no_scores"),
           type = "warning",
           duration = 3,
           id = notification_id
@@ -400,7 +424,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       showNotification(
-        "Visar statistiska jämförelser för användardata.",
+        tr("stats.notif.ready"),
         type = "message",
         duration = 3,
         id = notification_id
@@ -426,11 +450,11 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     output$summary_statistics_ui <- renderUI({
       state <- current_likert_state()
       if (is.null(state) || is.null(state$scaled_scores)) {
-        return(div(class = "text-muted", "Skalad poäng saknas. Beräkna poäng för att visa statistik per kategori."))
+        return(div(class = "text-muted", tr("stats.ui.summary.no_scores")))
       }
 
       if (!length(selected_group_definitions())) {
-        return(div(class = "text-muted", "Välj minst en grupp för att visa statistik per kategori."))
+        return(div(class = "text-muted", tr("stats.ui.summary.no_groups")))
       }
 
       stats_df <- summary_statistics()
@@ -440,16 +464,16 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     output$pairwise_statistics_ui <- renderUI({
       state <- current_likert_state()
       if (is.null(state) || is.null(state$scaled_scores)) {
-        return(div(class = "text-muted", "Skalad poäng saknas. Beräkna poäng för att visa parvisa jämförelser."))
+        return(div(class = "text-muted", tr("stats.ui.pairwise.no_scores")))
       }
 
       if (!length(selected_group_definitions())) {
-        return(div(class = "text-muted", "Välj minst två grupper för att visa parvisa jämförelser."))
+        return(div(class = "text-muted", tr("stats.ui.pairwise.no_groups")))
       }
 
       pairwise_df <- pairwise_statistics()
       if (!is.data.frame(pairwise_df) || nrow(pairwise_df) == 0) {
-        return(div(class = "text-muted", "Minst två grupper med data krävs för parvisa jämförelser."))
+        return(div(class = "text-muted", tr("stats.ui.pairwise.need_two")))
       }
 
       build_table(pairwise_df)
