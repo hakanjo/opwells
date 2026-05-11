@@ -3,30 +3,20 @@ mod_statistics_ui <- function(id) {
 
   tagList(
     br(),
-    h5("Statistik för valda Likert-frågor"),
-    helpText("Fliken anv\u00e4nder de kolumner som automatiskt valts vid uppladdning. Skalad po\u00e4ng sammanfattas n\u00e4r den har ber\u00e4knats."),
-    tabsetPanel(
-      id = ns("statistics_subtab"),
-      tabPanel(
-        "Totalt",
-        br(),
-        uiOutput(ns("total_statistics_ui"))
+    h5("Statistiska jämförelser för användardata"),
+    helpText("För varje kategori visas medel, median, standardavvikelse och tvåtredjedelsintervall (16,7:e till 83,3:e percentilen). Parvisa gruppjämförelser visas under tabellen."),
+    fluidRow(
+      column(
+        width = 4,
+        selectInput(ns("group_col"), "Kategorikolumn", choices = c("Välj kolumn" = ""), selected = ""),
+        uiOutput(ns("group_values_ui"))
       ),
-      tabPanel(
-        "Grupperat",
-        br(),
-        fluidRow(
-          column(
-            width = 4,
-            selectInput(ns("group_col"), "Gruppdefinition (valfritt)", choices = c("Ingen gruppering" = ""), selected = ""),
-            uiOutput(ns("group_controls_ui")),
-            actionButton(ns("add_group"), "Lägg till grupp")
-          ),
-          column(
-            width = 8,
-            uiOutput(ns("grouped_statistics_ui"))
-          )
-        )
+      column(
+        width = 8,
+        h4("Deskriptiv statistik per kategori"),
+        uiOutput(ns("summary_statistics_ui")),
+        h4("Parvisa jämförelser mellan grupper"),
+        uiOutput(ns("pairwise_statistics_ui"))
       )
     )
   )
@@ -35,41 +25,9 @@ mod_statistics_ui <- function(id) {
 mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_tab = NULL) {
   moduleServer(id, function(input, output, session) {
 
-    normalize_group_selection <- function(selected, groups, target_n = 2L) {
-      groups <- as.character(groups)
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-      if (!length(groups)) {
-        return(character(0))
-      }
-
-      selected <- as.character(selected)
-      selected <- selected[!is.na(selected) & nzchar(selected)]
-      selected <- unique(selected[selected %in% groups])
-
-      if (!length(selected)) {
-        selected <- groups[1]
-      }
-
-      if (target_n > 0 && length(selected) < target_n) {
-        missing <- setdiff(groups, selected)
-        if (length(missing)) {
-          selected <- c(selected, utils::head(missing, target_n - length(selected)))
-        }
-      }
-
-      selected
-    }
-
-    group_choice_for_index <- function(groups, selected_groups, idx) {
-      groups <- as.character(groups)
-      if (!length(groups)) {
-        return(character(0))
-      }
-
-      current <- selected_groups[idx]
-      others <- selected_groups[-idx]
-      available <- unique(c(current, setdiff(groups, others)))
-      c(intersect(groups, available), setdiff(available, groups))
+    trim_non_empty <- function(x) {
+      x_chr <- trimws(as.character(x))
+      x_chr[!is.na(x_chr) & nzchar(x_chr)]
     }
 
     detect_group_columns <- function(user_df, excluded_cols = character(0)) {
@@ -83,27 +41,25 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       is_group_like <- vapply(candidate_names, function(col_nm) {
-        x <- user_df[[col_nm]]
-        out <- tryCatch({
-          x_chr <- trimws(as.character(x))
-          x_chr <- x_chr[!is.na(x_chr) & nzchar(x_chr)]
-          if (!length(x_chr)) {
-            return(FALSE)
-          }
+        x <- trim_non_empty(user_df[[col_nm]])
+        if (!length(x)) {
+          return(FALSE)
+        }
 
-          x_num <- suppressWarnings(as.numeric(x_chr))
-          all_numeric <- !any(is.na(x_num))
-          if (!all_numeric) {
-            return(TRUE)
-          }
+        x_num <- suppressWarnings(as.numeric(x))
+        all_numeric <- !any(is.na(x_num))
+        if (!all_numeric) {
+          return(TRUE)
+        }
 
-          length(unique(x_num)) <= 10
-        }, error = function(e) FALSE)
-
-        isTRUE(out)
+        length(unique(x_num)) <= 10
       }, logical(1))
 
       candidate_names[is_group_like]
+    }
+
+    format_num <- function(x, digits = 2) {
+      ifelse(is.na(x), "", format(round(x, digits), nsmall = digits, trim = TRUE))
     }
 
     build_table <- function(df) {
@@ -127,30 +83,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       )
     }
 
-    build_statistics_section <- function(title, stats_bundle, has_scaled_scores = FALSE) {
-      display_bundle <- format_statistics_for_display(stats_bundle)
-
-      scaled_content <- if (isTRUE(has_scaled_scores)) {
-        build_table(display_bundle$scaled_summary)
-      } else {
-        div(class = "alert alert-info", "Ingen skalad poäng har beräknats ännu.")
-      }
-
-      tagList(
-        h4(title),
-        h5("Skalad poäng"),
-        scaled_content,
-        h5("Reliabilitet"),
-        build_table(display_bundle$reliability),
-        h5("Item-total-korrelationer"),
-        build_table(display_bundle$item_total)
-      )
-    }
-
-    selected_groups <- reactiveVal(character(0))
-    remove_observers <- list()
-    select_observers <- list()
-
     current_likert_state <- reactive({
       if (is.null(likert_state)) {
         return(NULL)
@@ -166,178 +98,136 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
     observe({
       user_df <- if (is.null(data)) NULL else data()
-      excluded <- character(0)
       state <- current_likert_state()
-      if (!is.null(state) && length(state$selected_columns)) {
-        excluded <- state$selected_columns
-      }
+      excluded <- if (is.null(state)) character(0) else state$selected_columns
 
       group_cols <- detect_group_columns(user_df, excluded_cols = excluded)
-      choices <- c("Ingen gruppering" = "", stats::setNames(group_cols, group_cols))
       selected <- input$group_col
-      if (is.null(selected) || !nzchar(selected) || !selected %in% group_cols) {
+      if (is.null(selected) || !selected %in% group_cols) {
         selected <- ""
       }
 
-      updateSelectInput(session, "group_col", choices = choices, selected = selected)
-    })
-
-    observe({
-      if (is.null(data) || is.null(input$group_col) || !nzchar(input$group_col)) {
-        selected_groups(character(0))
-        return()
-      }
-
-      user_df <- data()
-      req(is.data.frame(user_df), nrow(user_df) > 0, input$group_col %in% names(user_df))
-
-      groups <- sort(unique(as.character(user_df[[input$group_col]])))
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-      current <- selected_groups()
-      has_valid_current <- length(intersect(current, groups)) > 0
-      target_n <- if (has_valid_current) 1L else 2L
-      selected_groups(normalize_group_selection(current, groups, target_n = target_n))
-    })
-
-    output$group_controls_ui <- renderUI({
-      if (is.null(data) || is.null(input$group_col) || !nzchar(input$group_col)) {
-        return(NULL)
-      }
-
-      user_df <- data()
-      req(is.data.frame(user_df), nrow(user_df) > 0, input$group_col %in% names(user_df))
-
-      groups <- sort(unique(as.character(user_df[[input$group_col]])))
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-      selected <- selected_groups()
-      if (!length(groups) || !length(selected)) {
-        return(NULL)
-      }
-
-      tagList(lapply(seq_along(selected), function(i) {
-        fluidRow(
-          column(
-            width = 9,
-            selectInput(
-              session$ns(paste0("group_", i)),
-              label = paste("Grupp", i),
-              choices = group_choice_for_index(groups, selected, i),
-              selected = selected[i]
-            )
-          ),
-          column(
-            width = 3,
-            br(),
-            actionButton(
-              session$ns(paste0("remove_group_", i)),
-              label = "Ta bort",
-              class = "btn btn-default btn-sm"
-            )
-          )
-        )
-      }))
-    })
-
-    observe({
-      lapply(remove_observers, function(obs) obs$destroy())
-      lapply(select_observers, function(obs) obs$destroy())
-      remove_observers <<- list()
-      select_observers <<- list()
-
-      current <- selected_groups()
-      if (!length(current)) {
-        return()
-      }
-
-      remove_observers <<- lapply(seq_along(current), function(i) {
-        observeEvent(input[[paste0("remove_group_", i)]], {
-          values <- selected_groups()
-          if (length(values) <= 1) {
-            showNotification("Minst en grupp måste vara vald.", type = "message", duration = 3)
-            return()
-          }
-
-          selected_groups(values[-i])
-        }, ignoreInit = TRUE)
-      })
-
-      select_observers <<- lapply(seq_along(current), function(i) {
-        observeEvent(input[[paste0("group_", i)]], {
-          value <- input[[paste0("group_", i)]]
-          values <- selected_groups()
-          if (i > length(values) || is.null(value) || !nzchar(value) || value %in% values[-i]) {
-            return()
-          }
-
-          values[i] <- value
-          selected_groups(values)
-        }, ignoreInit = TRUE)
-      })
-    })
-
-    observeEvent(input$add_group, {
-      if (is.null(data) || is.null(input$group_col) || !nzchar(input$group_col)) {
-        return()
-      }
-
-      user_df <- data()
-      req(is.data.frame(user_df), nrow(user_df) > 0, input$group_col %in% names(user_df))
-
-      groups <- sort(unique(as.character(user_df[[input$group_col]])))
-      groups <- groups[!is.na(groups) & nzchar(groups)]
-      current <- selected_groups()
-
-      next_group <- setdiff(groups, current)
-      if (!length(next_group)) {
-        showNotification("Alla tillgängliga grupper är redan valda.", type = "warning", duration = 3)
-        return()
-      }
-
-      selected_groups(c(current, next_group[1]))
-    }, ignoreInit = TRUE)
-
-    total_statistics <- reactive({
-      state <- current_likert_state()
-      if (is.null(state) || !length(state$selected_columns)) {
-        return(NULL)
-      }
-
-      build_statistics_bundle(
-        scores = state$scaled_scores,
-        items_df = state$numeric_items
+      updateSelectInput(
+        session,
+        "group_col",
+        choices = c("Välj kolumn" = "", stats::setNames(group_cols, group_cols)),
+        selected = selected
       )
     })
 
-    grouped_statistics <- reactive({
-      if (is.null(data) || is.null(input$group_col) || !nzchar(input$group_col)) {
-        return(list())
-      }
+    output$group_values_ui <- renderUI({
+      req(!is.null(data), nzchar(input$group_col))
+      user_df <- data()
+      req(is.data.frame(user_df), input$group_col %in% names(user_df))
 
+      groups <- sort(unique(trim_non_empty(user_df[[input$group_col]])))
+      req(length(groups) > 0)
+
+      checkboxGroupInput(
+        session$ns("selected_groups"),
+        "Kategorier att inkludera",
+        choices = groups,
+        selected = groups
+      )
+    })
+
+    comparison_data <- reactive({
+      req(!is.null(data))
       user_df <- data()
       state <- current_likert_state()
-      selected <- selected_groups()
 
       req(
         is.data.frame(user_df),
         nrow(user_df) > 0,
-        input$group_col %in% names(user_df),
         !is.null(state),
-        length(state$selected_columns) > 0,
-        length(selected) > 0
+        !is.null(state$scaled_scores),
+        length(state$scaled_scores) == nrow(user_df),
+        nzchar(input$group_col),
+        input$group_col %in% names(user_df)
       )
 
-      lapply(selected, function(group_name) {
-        row_idx <- as.character(user_df[[input$group_col]]) %in% group_name
-        scores <- state$scaled_scores
-        scores_subset <- if (is.null(scores)) NULL else scores[row_idx]
-        items_subset <- state$numeric_items[row_idx, , drop = FALSE]
+      groups_all <- trim_non_empty(user_df[[input$group_col]])
+      groups_available <- sort(unique(groups_all))
 
-        list(
-          group = group_name,
-          stats = build_statistics_bundle(scores = scores_subset, items_df = items_subset),
-          has_scaled_scores = !is.null(scores) && any(!is.na(scores_subset))
+      selected_groups <- trim_non_empty(input$selected_groups)
+      if (!length(selected_groups)) {
+        selected_groups <- groups_available
+      }
+      selected_groups <- selected_groups[selected_groups %in% groups_available]
+
+      group_vec <- trimws(as.character(user_df[[input$group_col]]))
+      scores <- suppressWarnings(as.numeric(state$scaled_scores))
+
+      valid_idx <- !is.na(scores) & !is.na(group_vec) & nzchar(group_vec) & group_vec %in% selected_groups
+      df <- data.frame(
+        group = group_vec[valid_idx],
+        score = scores[valid_idx],
+        stringsAsFactors = FALSE
+      )
+
+      req(nrow(df) > 0)
+      df
+    })
+
+    summary_statistics <- reactive({
+      df <- comparison_data()
+      groups <- sort(unique(df$group))
+
+      rows <- lapply(groups, function(g) {
+        x <- df$score[df$group == g]
+        data.frame(
+          Kategori = g,
+          N = length(x),
+          Medel = mean(x),
+          Median = stats::median(x),
+          SD = stats::sd(x),
+          `2/3 nedre` = as.numeric(stats::quantile(x, probs = 1 / 6, na.rm = TRUE, names = FALSE)),
+          `2/3 övre` = as.numeric(stats::quantile(x, probs = 5 / 6, na.rm = TRUE, names = FALSE)),
+          stringsAsFactors = FALSE,
+          check.names = FALSE
         )
       })
+
+      out <- do.call(rbind, rows)
+      out$Medel <- format_num(out$Medel)
+      out$Median <- format_num(out$Median)
+      out$SD <- format_num(out$SD)
+      out$`2/3 nedre` <- format_num(out$`2/3 nedre`)
+      out$`2/3 övre` <- format_num(out$`2/3 övre`)
+      out
+    })
+
+    pairwise_statistics <- reactive({
+      df <- comparison_data()
+      groups <- sort(unique(df$group))
+
+      if (length(groups) < 2) {
+        return(data.frame())
+      }
+
+      pairs <- utils::combn(groups, 2, simplify = FALSE)
+      rows <- lapply(pairs, function(grp_pair) {
+        g1 <- grp_pair[[1]]
+        g2 <- grp_pair[[2]]
+        x1 <- df$score[df$group == g1]
+        x2 <- df$score[df$group == g2]
+
+        data.frame(
+          `Grupp 1` = g1,
+          `Grupp 2` = g2,
+          N1 = length(x1),
+          N2 = length(x2),
+          `Skillnad i medel` = mean(x1) - mean(x2),
+          `Skillnad i median` = stats::median(x1) - stats::median(x2),
+          stringsAsFactors = FALSE,
+          check.names = FALSE
+        )
+      })
+
+      out <- do.call(rbind, rows)
+      out$`Skillnad i medel` <- format_num(out$`Skillnad i medel`)
+      out$`Skillnad i median` <- format_num(out$`Skillnad i median`)
+      out
     })
 
     show_statistics_status_notification <- function() {
@@ -351,7 +241,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
         showNotification(
-          "Ingen användardata laddad. Ladda data i fliken Ladda data för att visa statistik.",
+          "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att visa jämförelser.",
           type = "warning",
           duration = 3,
           id = notification_id
@@ -359,20 +249,10 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         return()
       }
 
-      if (is.null(state) || !length(state$selected_columns)) {
+      if (is.null(state) || is.null(state$scaled_scores)) {
         showNotification(
-          "Välj Likert-kolumner i fliken Poäng för att visa reliabilitet och item-total-korrelationer.",
+          "Skalad poäng saknas. Beräkna poäng i dataflödet för att visa statistiska jämförelser.",
           type = "warning",
-          duration = 3,
-          id = notification_id
-        )
-        return()
-      }
-
-      if (is.null(state$scaled_scores)) {
-        showNotification(
-          "Skalad poäng är ännu inte beräknad. Reliabilitetsmått visas ändå för de valda frågorna.",
-          type = "message",
           duration = 3,
           id = notification_id
         )
@@ -380,7 +260,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       showNotification(
-        "Statistik visas för de valda frågorna och den beräknade skalade poängen.",
+        "Visar statistiska jämförelser för användardata.",
         type = "message",
         duration = 3,
         id = notification_id
@@ -403,40 +283,36 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       show_statistics_status_notification()
     }, ignoreInit = TRUE)
 
-    output$total_statistics_ui <- renderUI({
+    output$summary_statistics_ui <- renderUI({
       state <- current_likert_state()
-      if (is.null(state) || !length(state$selected_columns)) {
-        return(div(class = "text-muted", "Välj Likert-kolumner i Poäng för att visa total statistik."))
+      if (is.null(state) || is.null(state$scaled_scores)) {
+        return(div(class = "text-muted", "Skalad poäng saknas. Beräkna poäng för att visa statistik per kategori."))
       }
 
-      stats_bundle <- total_statistics()
-      if (is.null(stats_bundle)) {
-        return(NULL)
+      if (is.null(input$group_col) || !nzchar(input$group_col)) {
+        return(div(class = "text-muted", "Välj en kategorikolumn för att visa statistik per kategori."))
       }
 
-      build_statistics_section(
-        title = "Totalt",
-        stats_bundle = stats_bundle,
-        has_scaled_scores = !is.null(state$scaled_scores) && any(!is.na(state$scaled_scores))
-      )
+      stats_df <- summary_statistics()
+      build_table(stats_df)
     })
 
-    output$grouped_statistics_ui <- renderUI({
-      grouped <- grouped_statistics()
-      if (!length(grouped)) {
-        return(div(class = "text-muted", "Välj en gruppdefinition för att visa statistik per grupp."))
+    output$pairwise_statistics_ui <- renderUI({
+      state <- current_likert_state()
+      if (is.null(state) || is.null(state$scaled_scores)) {
+        return(div(class = "text-muted", "Skalad poäng saknas. Beräkna poäng för att visa parvisa jämförelser."))
       }
 
-      tagList(
-        h4("Per grupp"),
-        tagList(lapply(grouped, function(entry) {
-          build_statistics_section(
-            title = entry$group,
-            stats_bundle = entry$stats,
-            has_scaled_scores = entry$has_scaled_scores
-          )
-        }))
-      )
+      if (is.null(input$group_col) || !nzchar(input$group_col)) {
+        return(div(class = "text-muted", "Välj en kategorikolumn för att visa parvisa jämförelser."))
+      }
+
+      pairwise_df <- pairwise_statistics()
+      if (!is.data.frame(pairwise_df) || nrow(pairwise_df) == 0) {
+        return(div(class = "text-muted", "Minst två grupper med data krävs för parvisa jämförelser."))
+      }
+
+      build_table(pairwise_df)
     })
   })
 }

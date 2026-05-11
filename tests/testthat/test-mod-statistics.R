@@ -22,14 +22,7 @@ make_mod_statistics_env <- function(notification_log) {
   mod_env
 }
 
-count_statistics_group_selectors <- function(group_controls_ui) {
-  html <- paste(as.character(group_controls_ui), collapse = "")
-  matches <- regmatches(html, gregexpr("group_[0-9]+", html, perl = TRUE))[[1]]
-  matches <- matches[matches != ""]
-  length(unique(matches))
-}
-
-test_that("statistics module renders total and grouped statistics", {
+test_that("statistics module renders category summary and pairwise comparisons", {
   notification_log <- new.env(parent = emptyenv())
   notification_log$messages <- character(0)
 
@@ -58,24 +51,31 @@ test_that("statistics module renders total and grouped statistics", {
     {
       session$flushReact()
 
-      total_html <- paste(as.character(output$total_statistics_ui), collapse = "")
-      expect_true(grepl("Totalt", total_html, fixed = TRUE))
-      expect_true(grepl("Cronbach's alpha", total_html, fixed = TRUE))
+      summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
+      expect_true(grepl("Välj en kategorikolumn", summary_html, fixed = TRUE))
 
       session$setInputs(group_col = "grp")
       session$flushReact()
 
-      expect_equal(count_statistics_group_selectors(output$group_controls_ui), 2L)
+      session$setInputs(selected_groups = c("A", "B"))
+      session$flushReact()
 
-      grouped_html <- paste(as.character(output$grouped_statistics_ui), collapse = "")
-      expect_true(grepl("Per grupp", grouped_html, fixed = TRUE))
-      expect_true(grepl(">A<", grouped_html))
-      expect_true(grepl(">B<", grouped_html))
+      summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
+      expect_true(grepl("Kategori", summary_html, fixed = TRUE))
+      expect_true(grepl(">A<", summary_html))
+      expect_true(grepl(">B<", summary_html))
+      expect_true(grepl("2/3 nedre", summary_html, fixed = TRUE))
+
+      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      expect_true(grepl("Grupp 1", pairwise_html, fixed = TRUE))
+      expect_true(grepl("Skillnad i medel", pairwise_html, fixed = TRUE))
+      expect_true(grepl("Skillnad i median", pairwise_html, fixed = TRUE))
+      expect_false(grepl("p-värde", pairwise_html, fixed = TRUE))
     }
   )
 })
 
-test_that("statistics module shows guidance before likert selection", {
+test_that("statistics module shows guidance before scaled scores exist", {
   notification_log <- new.env(parent = emptyenv())
   notification_log$messages <- character(0)
 
@@ -97,8 +97,11 @@ test_that("statistics module shows guidance before likert selection", {
     {
       session$flushReact()
 
-      total_html <- paste(as.character(output$total_statistics_ui), collapse = "")
-      expect_true(grepl("Välj Likert-kolumner", total_html, fixed = TRUE))
+      summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
+      expect_true(grepl("Skalad poäng saknas", summary_html, fixed = TRUE))
+
+      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      expect_true(grepl("Skalad poäng saknas", pairwise_html, fixed = TRUE))
     }
   )
 })
