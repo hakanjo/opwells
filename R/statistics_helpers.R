@@ -2,6 +2,36 @@ format_stat_number <- function(x, digits = 2) {
   ifelse(is.na(x), "", format(round(x, digits), nsmall = digits, trim = TRUE))
 }
 
+format_p_value <- function(p) {
+  vapply(p, function(val) {
+    if (is.na(val) || !is.finite(val)) {
+      return("")
+    }
+    if (val < 0.01) {
+      return("< 0.01")
+    }
+    format(round(val, 2), nsmall = 2, trim = TRUE)
+  }, character(1))
+}
+
+calculate_ttest_pvalue <- function(x, y) {
+  tryCatch({
+    x_num <- suppressWarnings(as.numeric(x))
+    y_num <- suppressWarnings(as.numeric(y))
+    x_clean <- x_num[!is.na(x_num)]
+    y_clean <- y_num[!is.na(y_num)]
+    
+    if (length(x_clean) < 2 || length(y_clean) < 2) {
+      return(NA_real_)
+    }
+    
+    t_result <- stats::t.test(x_clean, y_clean)
+    as.numeric(t_result$p.value)
+  }, error = function(e) {
+    NA_real_
+  })
+}
+
 summarize_scaled_scores <- function(scores) {
   x <- suppressWarnings(as.numeric(scores))
   x <- x[!is.na(x)]

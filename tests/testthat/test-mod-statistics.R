@@ -72,7 +72,7 @@ test_that("statistics module renders category summary and pairwise comparisons",
       expect_true(grepl("Grupp 1", pairwise_html, fixed = TRUE))
       expect_true(grepl("Skillnad i medel", pairwise_html, fixed = TRUE))
       expect_true(grepl("Skillnad i median", pairwise_html, fixed = TRUE))
-      expect_false(grepl("p-värde", pairwise_html, fixed = TRUE))
+      expect_true(grepl("p-värde", pairwise_html, fixed = TRUE))
 
       # Same value label chosen in different columns should be disambiguated.
       session$setInputs(grp_grp = "A", grp_segment = "A")

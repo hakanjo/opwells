@@ -832,6 +832,10 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     output$include_total_toggle <- renderUI({
+      if (is.null(user_data())) {
+        return(NULL)
+      }
+
       current_value <- current_include_total()
 
       checkboxInput(

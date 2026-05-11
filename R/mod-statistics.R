@@ -287,6 +287,10 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     })
 
     output$include_total_toggle <- renderUI({
+      if (!has_user_data()) {
+        return(NULL)
+      }
+
       checkboxInput(
         session$ns("include_total"),
         label = tr("stats.ui.include_total"),
@@ -498,6 +502,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         if (is_g1_user && is_g2_user) {
           x1 <- df$score[df$group == g1]
           x2 <- df$score[df$group == g2]
+          p_val <- calculate_ttest_pvalue(x1, x2)
           data.frame(
             group_1 = g1,
             group_2 = g2,
@@ -505,6 +510,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
             n2 = length(x2),
             mean_diff = mean(x1) - mean(x2),
             median_diff = stats::median(x1) - stats::median(x2),
+            p_value = p_val,
             stringsAsFactors = FALSE
           )
         } else if ((is_g1_user && is_g2_ref) || (is_g1_ref && is_g2_user)) {
@@ -530,6 +536,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
             n2 = NA_integer_,
             mean_diff = mean(x1) - ref_row$mean[1],
             median_diff = stats::median(x1) - ref_row$median[1],
+            p_value = NA_real_,
             stringsAsFactors = FALSE
           )
         } else {
@@ -545,6 +552,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       out <- do.call(rbind, rows)
       out$mean_diff <- format_num(out$mean_diff)
       out$median_diff <- format_num(out$median_diff)
+      out$p_value <- format_p_value(out$p_value)
 
       names(out) <- c(
         tr("stats.pairwise.col.group1"),
@@ -552,7 +560,8 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         tr("stats.pairwise.col.n1"),
         tr("stats.pairwise.col.n2"),
         tr("stats.pairwise.col.mean_diff"),
-        tr("stats.pairwise.col.median_diff")
+        tr("stats.pairwise.col.median_diff"),
+        tr("stats.pairwise.col.p_value")
       )
 
       out
