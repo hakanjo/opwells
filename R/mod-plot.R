@@ -99,6 +99,17 @@ plot_parse_group_definitions <- function(selections) {
   })
 }
 
+# Create a combined group definition from a list of source group definitions.
+# A combined group represents rows that match ANY of the source group conditions.
+plot_create_combined_group <- function(source_defs, label) {
+  list(
+    is_combined = TRUE,
+    source_defs = source_defs,
+    label = label,
+    is_total = FALSE
+  )
+}
+
 plot_layers_from_selection <- function(group_definitions, show_raw = FALSE) {
   if (!length(group_definitions)) {
     return("reference")
@@ -112,7 +123,34 @@ plot_layers_from_selection <- function(group_definitions, show_raw = FALSE) {
 }
 
 # group_definitions: list of list(col=, value=, label=) produced by
-# plot_parse_group_definitions().  Each entry selects one group for the plot.
+# plot_parse_group_definitions() or plot_create_combined_group(). Each entry
+# selects one group (simple or combined) for the plot.
+# Helper function to get row indices for a group definition (simple or combined)
+plot_get_group_indices <- function(user_df, group_def) {
+  if (isTRUE(group_def$is_total)) {
+    return(seq_len(nrow(user_df)))
+  }
+
+  if (isTRUE(group_def$is_combined)) {
+    # For combined groups, find rows matching ANY source group
+    idx_list <- lapply(group_def$source_defs, function(src_def) {
+      plot_get_group_indices(user_df, src_def)
+    })
+    return(sort(unique(unlist(idx_list))))
+  }
+
+  # Simple group: single col/value pair
+  col   <- group_def$col
+  value <- group_def$value
+
+  if (!(col %in% names(user_df))) {
+    return(integer(0))
+  }
+
+  row_vals <- trimws(as.character(user_df[[col]]))
+  which(row_vals == value)
+}
+
 plot_build_user_data <- function(user_df, scores, group_definitions) {
   if (!is.data.frame(user_df) || nrow(user_df) == 0 || is.null(scores)) {
     return(list(summary = data.frame(), raw = data.frame()))
@@ -124,18 +162,10 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
   score_values <- suppressWarnings(as.numeric(scores))
 
   summary_list <- lapply(group_definitions, function(gd) {
-    col      <- gd$col
-    value    <- gd$value
     label    <- gd$label
     is_total <- isTRUE(gd$is_total)
 
-    if (is_total) {
-      idx <- seq_len(nrow(user_df))
-    } else {
-      if (!(col %in% names(user_df))) return(NULL)
-      row_vals <- trimws(as.character(user_df[[col]]))
-      idx <- which(row_vals == value)
-    }
+    idx <- plot_get_group_indices(user_df, gd)
 
     if (!length(idx)) return(NULL)
 
@@ -172,18 +202,10 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
   summary_data <- if (length(summary_list)) do.call(rbind, summary_list) else data.frame()
 
   raw_list <- lapply(group_definitions, function(gd) {
-    col      <- gd$col
-    value    <- gd$value
     label    <- gd$label
     is_total <- isTRUE(gd$is_total)
 
-    if (is_total) {
-      idx <- seq_len(nrow(user_df))
-    } else {
-      if (!(col %in% names(user_df))) return(NULL)
-      row_vals <- trimws(as.character(user_df[[col]]))
-      idx <- which(row_vals == value)
-    }
+    idx <- plot_get_group_indices(user_df, gd)
 
     if (!length(idx)) return(NULL)
 
@@ -519,6 +541,13 @@ mod_plot_ui <- function(id) {
         width = 3,
         p("När inga grupper är valda visas referensdata. När en eller flera grupper väljs visas användardata. Håll pekaren över punkter eller sammanfattningar för detaljer."),
         uiOutput(ns("group_selectors")),
+        hr(),
+        p(strong("Kombinera grupper"), style = "margin-top: 20px;"),
+        p("Välj ett namn och klicka på 'Lägg till kombinerad grupp' för att kombinera de valda grupperna.", style = "font-size: 0.9em; color: #6b6b6b;"),
+        textInput(ns("combined_group_label"), label = "Namn på kombinerad grupp", placeholder = "T.ex. 'Kvinnor 2024-2025'"),
+        actionButton(ns("add_combined_group"), "Lägg till kombinerad grupp", class = "btn-primary"),
+        uiOutput(ns("combined_groups_list")),
+        hr(),
         uiOutput(ns("include_total_toggle")),
         uiOutput(ns("raw_points_toggle")),
         uiOutput(ns("plot_status"))
@@ -605,10 +634,135 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
       names(selections) <- names(col_groups)
       selections <- Filter(function(v) length(plot_trim_non_empty(v)) > 0, selections)
       defs <- plot_parse_group_definitions(selections)
+      
+      # Add combined groups to the definitions
+      combined <- combined_groups()
+      if (length(combined)) {
+        defs <- c(defs, combined)
+      }
+      
+      # Add total if include_total is checked and there are any groups (basic or combined)
       if (length(defs) && isTRUE(input$include_total)) {
         defs <- c(list(plot_total_group_definition()), defs)
       }
+      
       defs
+    })
+
+    # Reactive value to store combined groups
+    combined_groups <- reactiveVal(list())
+
+    # Observer for adding combined groups
+    observeEvent(input$add_combined_group, {
+      label <- trimws(input$combined_group_label)
+      if (!nzchar(label)) {
+        showNotification("Ange ett namn för den kombinerade gruppen", type = "warning")
+        return()
+      }
+
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
+      current_selections <- lapply(names(col_groups), function(col) input[[paste0("grp_", col)]])
+      names(current_selections) <- names(col_groups)
+      current_selections <- Filter(function(v) length(plot_trim_non_empty(v)) > 0, current_selections)
+
+      if (!length(current_selections)) {
+        showNotification("Välj minst en grupp för att kombinera", type = "warning")
+        return()
+      }
+
+      # Parse selected groups into group definitions
+      source_defs <- plot_parse_group_definitions(current_selections)
+
+      if (!length(source_defs)) {
+        showNotification("Kunde inte skapa kombinerad grupp", type = "error")
+        return()
+      }
+
+      # Create the combined group definition
+      combined_group <- plot_create_combined_group(source_defs, label)
+
+      # Add it to the list of combined groups
+      current_combined <- combined_groups()
+      combined_groups(c(current_combined, list(combined_group)))
+
+      # Clear the input field
+      updateTextInput(session, "combined_group_label", value = "")
+
+      showNotification(sprintf("Kombinerad grupp '%s' skapad!", label), type = "message")
+    })
+
+    # Track button IDs that already have observers to avoid duplicates
+    created_observers <- reactiveVal(character(0))
+
+    output$combined_groups_list <- renderUI({
+      combined <- combined_groups()
+      if (!length(combined)) {
+        return(NULL)
+      }
+
+      ns <- session$ns
+      tagList(
+        p(strong(sprintf("Kombinerade grupper (%d)", length(combined))), style = "margin-top: 15px; margin-bottom: 5px;"),
+        lapply(seq_along(combined), function(i) {
+          group <- combined[[i]]
+          label <- group$label
+          # Create a sanitized ID based on the label
+          safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
+          tags$div(
+            style = "background-color: #f5f5f5; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;",
+            tags$span(label),
+            actionButton(
+              ns(paste0("remove_combined_group_", safe_id)),
+              "Ta bort",
+              class = "btn-sm btn-default",
+              style = "margin: 0;"
+            )
+          )
+        })
+      )
+    })
+
+    # Create observers for remove buttons, ensuring each button only gets one observer
+    observe({
+      combined <- combined_groups()
+      if (!length(combined)) {
+        return()
+      }
+
+      current_buttons <- vapply(combined, function(g) {
+        paste0("remove_combined_group_", gsub("[^a-zA-Z0-9_]", "_", g$label))
+      }, character(1))
+
+      # Get list of already-created observers
+      existing <- created_observers()
+
+      # Create new observers only for buttons we haven't seen before
+      for (i in seq_along(combined)) {
+        label <- combined[[i]]$label
+        safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
+        button_id <- paste0("remove_combined_group_", safe_id)
+
+        if (!(button_id %in% existing)) {
+          local({
+            btn_id <- button_id
+            group_label <- label
+
+            observeEvent(input[[btn_id]], {
+              current_combined <- combined_groups()
+              idx <- which(vapply(current_combined, function(g) g$label == group_label, logical(1)))
+
+              if (length(idx) > 0) {
+                removed_label <- current_combined[[idx[1]]]$label
+                combined_groups(current_combined[-idx[1]])
+                showNotification(sprintf("Kombinerad grupp '%s' borttagen", removed_label), type = "message")
+              }
+            }, ignoreInit = TRUE)
+          })
+
+          # Add this button ID to the set of created observers
+          created_observers(c(created_observers(), button_id))
+        }
+      }
     })
 
     output$include_total_toggle <- renderUI({
@@ -616,7 +770,11 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
       has_selection <- any(vapply(names(col_groups), function(col) {
         length(plot_trim_non_empty(input[[paste0("grp_", col)]])) > 0
       }, logical(1)))
-      if (!has_selection) {
+      
+      # Show toggle if there's either a basic group selection or combined groups
+      has_combined <- length(combined_groups()) > 0
+      
+      if (!has_selection && !has_combined) {
         return(NULL)
       }
 
