@@ -51,27 +51,30 @@ server <- function(input, output, session) {
         ),
         windowTitle = tr("app.title")
       ),
-      tags$div(
-        style = "margin: 16px 0 20px 0;",
-        tags$ul(
-          tags$li(tr("app.intro.li1")),
-          tags$li(tr("app.intro.li2")),
-          tags$li(tr("app.intro.li3")),
-          tags$li(tr("app.intro.li4")),
-          tags$li(
-            tr("app.intro.project_prefix"),
-            tags$a(tr("app.intro.qa_link"), href = "#"),
-            tr("app.intro.or_contact"),
-            tags$a("jeanette.melin@lnu.se", href = "mailto:jeanette.melin@lnu.se"),
-            "."
-          )
-        ),
-        tags$p(
-          tags$em(tr("app.intro.ref_note"))
-        )
-      ),
       tabsetPanel(
         id = "main_tab",
+        tabPanel(
+          "Om OPWELLS",
+          tags$div(
+            style = "margin: 16px 0 20px 0;",
+            tags$ul(
+              tags$li(tr("app.intro.li1")),
+              tags$li(tr("app.intro.li2")),
+              tags$li(tr("app.intro.li3")),
+              tags$li(tr("app.intro.li4")),
+              tags$li(
+                tr("app.intro.project_prefix"),
+                tags$a(tr("app.intro.qa_link"), href = "#"),
+                tr("app.intro.or_contact"),
+                tags$a("jeanette.melin@lnu.se", href = "mailto:jeanette.melin@lnu.se"),
+                "."
+              )
+            ),
+            tags$p(
+              tags$em(tr("app.intro.ref_note"))
+            )
+          )
+        ),
         tabPanel(
           tr("app.tab.data_input"),
           value = "data_input",
