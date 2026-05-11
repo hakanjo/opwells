@@ -28,7 +28,7 @@ server <- function(input, output, session) {
 
     tagList(
       titlePanel(
-        div(
+        title = div(
           style = "display: flex; justify-content: space-between; align-items: center;",
           tr("app.title"),
           div(
@@ -48,7 +48,8 @@ server <- function(input, output, session) {
               )
             })
           )
-        )
+        ),
+        windowTitle = tr("app.title")
       ),
       tags$div(
         style = "margin: 16px 0 20px 0;",
