@@ -73,6 +73,32 @@ plot_column_groups <- function(user_df, exclude_cols = character(0)) {
   result
 }
 
+# Keep only available and non-empty selections per current group columns.
+plot_sanitize_group_selections <- function(selections, col_groups) {
+  if (!is.list(selections) || !length(col_groups)) {
+    return(list())
+  }
+
+  out <- lapply(names(col_groups), function(col_nm) {
+    selected <- selections[[col_nm]]
+    selected <- plot_trim_non_empty(selected)
+    selected[selected %in% col_groups[[col_nm]]]
+  })
+  names(out) <- names(col_groups)
+
+  Filter(function(v) length(v) > 0, out)
+}
+
+plot_read_group_selections_from_input <- function(input, col_groups) {
+  if (!length(col_groups)) {
+    return(list())
+  }
+
+  selections <- lapply(names(col_groups), function(col_nm) input[[paste0("grp_", col_nm)]])
+  names(selections) <- names(col_groups)
+  plot_sanitize_group_selections(selections, col_groups)
+}
+
 # Convert named selections (list(col = c(val,...))) into a list of group
 # definition records: list(col=, value=, label=).  Labels are the value string
 # unless the same value appears in more than one column, in which case they are
@@ -97,6 +123,20 @@ plot_parse_group_definitions <- function(selections) {
     d$is_total <- FALSE
     d
   })
+}
+
+plot_build_selected_group_definitions <- function(selections, combined_groups = list(), include_total = FALSE) {
+  defs <- plot_parse_group_definitions(selections)
+
+  if (length(combined_groups)) {
+    defs <- c(defs, combined_groups)
+  }
+
+  if (length(defs) && isTRUE(include_total)) {
+    defs <- c(list(plot_total_group_definition()), defs)
+  }
+
+  defs
 }
 
 # Create a combined group definition from a list of source group definitions.
@@ -210,7 +250,7 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
     if (!length(idx)) return(NULL)
 
     df <- data.frame(
-      row_id = idx + 1, group_label = label,
+      row_id = idx, group_label = label,
       score_value = score_values[idx], source = "raw", is_total = is_total,
       stringsAsFactors = FALSE
     )
@@ -561,8 +601,17 @@ mod_plot_ui <- function(id) {
   )
 }
 
-mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
+mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, group_state = NULL, active_tab = NULL) {
   moduleServer(id, function(input, output, session) {
+    use_shared_group_state <- inherits(group_state, "reactivevalues")
+    is_module_active <- reactive({
+      if (is.null(active_tab)) {
+        return(TRUE)
+      }
+
+      identical(active_tab(), "plot")
+    })
+
     current_scores <- reactive({
       if (is.null(scores)) {
         return(NULL)
@@ -599,13 +648,110 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
       if (is.list(v) && "selected_columns" %in% names(v)) v$selected_columns else if (is.character(v)) v else character(0)
     })
 
+    local_combined_groups <- reactiveVal(list())
+
+    get_combined_groups <- reactive({
+      if (!use_shared_group_state) {
+        return(local_combined_groups())
+      }
+
+      value <- group_state$combined_groups
+      if (is.list(value)) value else list()
+    })
+
+    set_combined_groups <- function(value) {
+      if (use_shared_group_state) {
+        group_state$combined_groups <- value
+      } else {
+        local_combined_groups(value)
+      }
+    }
+
+    current_include_total <- reactive({
+      if (!use_shared_group_state) {
+        return(isTRUE(input$include_total))
+      }
+
+      isTRUE(group_state$include_total)
+    })
+
+    observeEvent(input$include_total, {
+      if (!use_shared_group_state) {
+        return()
+      }
+
+      if (!isTRUE(is_module_active())) {
+        return()
+      }
+
+      value <- isTRUE(input$include_total)
+      if (!identical(isTRUE(group_state$include_total), value)) {
+        group_state$include_total <- value
+      }
+    }, ignoreInit = TRUE)
+
+    selected_group_selections <- reactive({
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
+      if (!length(col_groups)) {
+        return(list())
+      }
+
+      if (use_shared_group_state) {
+        return(plot_sanitize_group_selections(group_state$selections, col_groups))
+      }
+
+      plot_read_group_selections_from_input(input, col_groups)
+    })
+
+    input_group_selections <- reactive({
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
+      plot_read_group_selections_from_input(input, col_groups)
+    })
+
+    observeEvent(input_group_selections(), {
+      if (!use_shared_group_state) {
+        return()
+      }
+
+      if (!isTRUE(is_module_active())) {
+        return()
+      }
+
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
+      if (!length(col_groups)) {
+        if (!identical(group_state$selections, list())) {
+          group_state$selections <- list()
+        }
+        return()
+      }
+
+      input_selections <- input_group_selections()
+      if (!identical(input_selections, plot_sanitize_group_selections(group_state$selections, col_groups))) {
+        group_state$selections <- input_selections
+      }
+    }, ignoreInit = TRUE)
+
     observe({
       col_groups <- plot_column_groups(user_data(), current_item_cols())
       for (col in names(col_groups)) {
         input_id <- paste0("grp_", col)
         choices  <- col_groups[[col]]
-        current  <- isolate(input[[input_id]])
+        current <- if (use_shared_group_state) {
+          selected_group_selections()[[col]]
+        } else {
+          isolate(input[[input_id]])
+        }
         valid    <- current[current %in% choices]
+
+        current_input <- isolate(input[[input_id]])
+        current_norm <- sort(unique(plot_trim_non_empty(current_input)))
+        valid_norm <- sort(unique(plot_trim_non_empty(valid)))
+
+        if (identical(current_norm, valid_norm)) {
+          next
+        }
+
+        freezeReactiveValue(input, input_id)
         updateSelectizeInput(session, input_id, choices = choices, selected = valid, server = TRUE)
       }
     })
@@ -629,28 +775,12 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
     })
 
     group_definitions <- reactive({
-      col_groups <- plot_column_groups(user_data(), current_item_cols())
-      selections <- lapply(names(col_groups), function(col) input[[paste0("grp_", col)]])
-      names(selections) <- names(col_groups)
-      selections <- Filter(function(v) length(plot_trim_non_empty(v)) > 0, selections)
-      defs <- plot_parse_group_definitions(selections)
-      
-      # Add combined groups to the definitions
-      combined <- combined_groups()
-      if (length(combined)) {
-        defs <- c(defs, combined)
-      }
-      
-      # Add total if include_total is checked and there are any groups (basic or combined)
-      if (length(defs) && isTRUE(input$include_total)) {
-        defs <- c(list(plot_total_group_definition()), defs)
-      }
-      
-      defs
+      plot_build_selected_group_definitions(
+        selections = selected_group_selections(),
+        combined_groups = get_combined_groups(),
+        include_total = current_include_total()
+      )
     })
-
-    # Reactive value to store combined groups
-    combined_groups <- reactiveVal(list())
 
     # Observer for adding combined groups
     observeEvent(input$add_combined_group, {
@@ -660,10 +790,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
         return()
       }
 
-      col_groups <- plot_column_groups(user_data(), current_item_cols())
-      current_selections <- lapply(names(col_groups), function(col) input[[paste0("grp_", col)]])
-      names(current_selections) <- names(col_groups)
-      current_selections <- Filter(function(v) length(plot_trim_non_empty(v)) > 0, current_selections)
+      current_selections <- selected_group_selections()
 
       if (!length(current_selections)) {
         showNotification("Välj minst en grupp för att kombinera", type = "warning")
@@ -682,8 +809,8 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
       combined_group <- plot_create_combined_group(source_defs, label)
 
       # Add it to the list of combined groups
-      current_combined <- combined_groups()
-      combined_groups(c(current_combined, list(combined_group)))
+      current_combined <- get_combined_groups()
+      set_combined_groups(c(current_combined, list(combined_group)))
 
       # Clear the input field
       updateTextInput(session, "combined_group_label", value = "")
@@ -695,7 +822,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
     created_observers <- reactiveVal(character(0))
 
     output$combined_groups_list <- renderUI({
-      combined <- combined_groups()
+      combined <- get_combined_groups()
       if (!length(combined)) {
         return(NULL)
       }
@@ -724,7 +851,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
 
     # Create observers for remove buttons, ensuring each button only gets one observer
     observe({
-      combined <- combined_groups()
+      combined <- get_combined_groups()
       if (!length(combined)) {
         return()
       }
@@ -748,12 +875,12 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
             group_label <- label
 
             observeEvent(input[[btn_id]], {
-              current_combined <- combined_groups()
+              current_combined <- get_combined_groups()
               idx <- which(vapply(current_combined, function(g) g$label == group_label, logical(1)))
 
               if (length(idx) > 0) {
                 removed_label <- current_combined[[idx[1]]]$label
-                combined_groups(current_combined[-idx[1]])
+                set_combined_groups(current_combined[-idx[1]])
                 showNotification(sprintf("Kombinerad grupp '%s' borttagen", removed_label), type = "message")
               }
             }, ignoreInit = TRUE)
@@ -767,24 +894,33 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
 
     output$include_total_toggle <- renderUI({
       col_groups <- plot_column_groups(user_data(), current_item_cols())
+      selections <- selected_group_selections()
       has_selection <- any(vapply(names(col_groups), function(col) {
-        length(plot_trim_non_empty(input[[paste0("grp_", col)]])) > 0
+        length(plot_trim_non_empty(selections[[col]])) > 0
       }, logical(1)))
-      
+
       # Show toggle if there's either a basic group selection or combined groups
-      has_combined <- length(combined_groups()) > 0
-      
+      has_combined <- length(get_combined_groups()) > 0
+
       if (!has_selection && !has_combined) {
         return(NULL)
       }
 
-      current_value <- isolate(input$include_total)
+      current_value <- current_include_total()
 
       checkboxInput(
         session$ns("include_total"),
         label = "Inkludera totalt",
         value = isTRUE(current_value)
       )
+    })
+
+    observe({
+      if (!use_shared_group_state) {
+        return()
+      }
+
+      updateCheckboxInput(session, "include_total", value = current_include_total())
     })
 
     output$raw_points_toggle <- renderUI({

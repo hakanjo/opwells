@@ -9,7 +9,14 @@ mod_statistics_ui <- function(id) {
       column(
         width = 4,
         p("Välj en eller flera grupper i en eller flera kolumner. Valda grupper jämförs mot varandra i tabellerna till höger."),
-        uiOutput(ns("group_selectors"))
+        uiOutput(ns("group_selectors")),
+        hr(),
+        p(strong("Kombinera grupper"), style = "margin-top: 20px;"),
+        p("Välj ett namn och klicka på 'Lägg till kombinerad grupp' för att kombinera de valda grupperna.", style = "font-size: 0.9em; color: #6b6b6b;"),
+        textInput(ns("combined_group_label"), label = "Namn på kombinerad grupp", placeholder = "T.ex. 'Kvinnor 2024-2025'"),
+        actionButton(ns("add_combined_group"), "Lägg till kombinerad grupp", class = "btn-primary"),
+        uiOutput(ns("combined_groups_list")),
+        uiOutput(ns("include_total_toggle"))
       ),
       column(
         width = 8,
@@ -22,68 +29,114 @@ mod_statistics_ui <- function(id) {
   )
 }
 
-mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_tab = NULL) {
+mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_tab = NULL, group_state = NULL) {
   moduleServer(id, function(input, output, session) {
-
-    trim_non_empty <- function(x) {
-      x_chr <- trimws(as.character(x))
-      x_chr[!is.na(x_chr) & nzchar(x_chr)]
-    }
-
-    detect_group_columns <- function(user_df, excluded_cols = character(0)) {
-      if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
-        return(character(0))
+    use_shared_group_state <- inherits(group_state, "reactivevalues")
+    is_module_active <- reactive({
+      if (is.null(active_tab)) {
+        return(TRUE)
       }
 
-      candidate_names <- setdiff(names(user_df), excluded_cols)
-      if (!length(candidate_names)) {
-        return(character(0))
-      }
-
-      is_group_like <- vapply(candidate_names, function(col_nm) {
-        x <- trim_non_empty(user_df[[col_nm]])
-        if (!length(x)) {
-          return(FALSE)
-        }
-
-        x_num <- suppressWarnings(as.numeric(x))
-        all_numeric <- !any(is.na(x_num))
-        if (!all_numeric) {
-          return(TRUE)
-        }
-
-        length(unique(x_num)) <= 10
-      }, logical(1))
-
-      candidate_names[is_group_like]
-    }
+      identical(active_tab(), "statistics")
+    })
 
     column_groups <- reactive({
       user_df <- if (is.null(data)) NULL else data()
       state <- current_likert_state()
       excluded <- if (is.null(state) || is.null(state$selected_columns)) character(0) else state$selected_columns
 
-      cols <- detect_group_columns(user_df, excluded_cols = excluded)
-      if (!length(cols)) {
-        return(list())
-      }
-
-      groups <- lapply(cols, function(col_nm) sort(unique(trim_non_empty(user_df[[col_nm]]))))
-      names(groups) <- cols
-      groups
+      plot_column_groups(user_df, exclude_cols = excluded)
     })
 
-    selected_group_definitions <- reactive({
+    local_combined_groups <- reactiveVal(list())
+
+    get_combined_groups <- reactive({
+      if (!use_shared_group_state) {
+        return(local_combined_groups())
+      }
+
+      value <- group_state$combined_groups
+      if (is.list(value)) value else list()
+    })
+
+    set_combined_groups <- function(value) {
+      if (use_shared_group_state) {
+        group_state$combined_groups <- value
+      } else {
+        local_combined_groups(value)
+      }
+    }
+
+    current_include_total <- reactive({
+      if (!use_shared_group_state) {
+        return(isTRUE(input$include_total))
+      }
+
+      isTRUE(group_state$include_total)
+    })
+
+    observeEvent(input$include_total, {
+      if (!use_shared_group_state) {
+        return()
+      }
+
+      if (!isTRUE(is_module_active())) {
+        return()
+      }
+
+      value <- isTRUE(input$include_total)
+      if (!identical(isTRUE(group_state$include_total), value)) {
+        group_state$include_total <- value
+      }
+    }, ignoreInit = TRUE)
+
+    selected_group_selections <- reactive({
       col_groups <- column_groups()
       if (!length(col_groups)) {
         return(list())
       }
 
-      selections <- lapply(names(col_groups), function(col_nm) input[[paste0("grp_", col_nm)]])
-      names(selections) <- names(col_groups)
-      selections <- Filter(function(v) length(trim_non_empty(v)) > 0, selections)
+      if (use_shared_group_state) {
+        return(plot_sanitize_group_selections(group_state$selections, col_groups))
+      }
 
-      plot_parse_group_definitions(selections)
+      plot_read_group_selections_from_input(input, col_groups)
+    })
+
+    input_group_selections <- reactive({
+      col_groups <- column_groups()
+      plot_read_group_selections_from_input(input, col_groups)
+    })
+
+    observeEvent(input_group_selections(), {
+      if (!use_shared_group_state) {
+        return()
+      }
+
+      if (!isTRUE(is_module_active())) {
+        return()
+      }
+
+      col_groups <- column_groups()
+      if (!length(col_groups)) {
+        if (!identical(group_state$selections, list())) {
+          group_state$selections <- list()
+        }
+        return()
+      }
+
+      input_selections <- input_group_selections()
+      if (!identical(input_selections, plot_sanitize_group_selections(group_state$selections, col_groups))) {
+        group_state$selections <- input_selections
+      }
+    }, ignoreInit = TRUE)
+
+    selected_group_definitions <- reactive({
+      plot_build_selected_group_definitions(
+        selections = selected_group_selections(),
+        combined_groups = get_combined_groups(),
+        include_total = current_include_total()
+      )
     })
 
     format_num <- function(x, digits = 2) {
@@ -129,8 +182,22 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       for (col_nm in names(col_groups)) {
         input_id <- paste0("grp_", col_nm)
         choices <- col_groups[[col_nm]]
-        current <- isolate(input[[input_id]])
+        current <- if (use_shared_group_state) {
+          selected_group_selections()[[col_nm]]
+        } else {
+          isolate(input[[input_id]])
+        }
         valid <- current[current %in% choices]
+
+        current_input <- isolate(input[[input_id]])
+        current_norm <- sort(unique(plot_trim_non_empty(current_input)))
+        valid_norm <- sort(unique(plot_trim_non_empty(valid)))
+
+        if (identical(current_norm, valid_norm)) {
+          next
+        }
+
+        freezeReactiveValue(input, input_id)
 
         updateSelectizeInput(
           session,
@@ -160,6 +227,126 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       })
     })
 
+    observe({
+      if (!use_shared_group_state) {
+        return()
+      }
+
+      updateCheckboxInput(session, "include_total", value = current_include_total())
+    })
+
+    observeEvent(input$add_combined_group, {
+      label <- trimws(input$combined_group_label)
+      if (!nzchar(label)) {
+        showNotification("Ange ett namn för den kombinerade gruppen", type = "warning")
+        return()
+      }
+
+      current_selections <- selected_group_selections()
+      if (!length(current_selections)) {
+        showNotification("Välj minst en grupp för att kombinera", type = "warning")
+        return()
+      }
+
+      source_defs <- plot_parse_group_definitions(current_selections)
+      if (!length(source_defs)) {
+        showNotification("Kunde inte skapa kombinerad grupp", type = "error")
+        return()
+      }
+
+      combined_group <- plot_create_combined_group(source_defs, label)
+      current_combined <- get_combined_groups()
+      set_combined_groups(c(current_combined, list(combined_group)))
+
+      updateTextInput(session, "combined_group_label", value = "")
+      showNotification(sprintf("Kombinerad grupp '%s' skapad!", label), type = "message")
+    })
+
+    created_observers <- reactiveVal(character(0))
+
+    output$combined_groups_list <- renderUI({
+      combined <- get_combined_groups()
+      if (!length(combined)) {
+        return(NULL)
+      }
+
+      ns <- session$ns
+      tagList(
+        p(strong(sprintf("Kombinerade grupper (%d)", length(combined))), style = "margin-top: 15px; margin-bottom: 5px;"),
+        lapply(seq_along(combined), function(i) {
+          group <- combined[[i]]
+          label <- group$label
+          safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
+
+          tags$div(
+            style = "background-color: #f5f5f5; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;",
+            tags$span(label),
+            actionButton(
+              ns(paste0("remove_combined_group_", safe_id)),
+              "Ta bort",
+              class = "btn-sm btn-default",
+              style = "margin: 0;"
+            )
+          )
+        })
+      )
+    })
+
+    observe({
+      combined <- get_combined_groups()
+      if (!length(combined)) {
+        return()
+      }
+
+      existing <- created_observers()
+
+      for (i in seq_along(combined)) {
+        label <- combined[[i]]$label
+        safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
+        button_id <- paste0("remove_combined_group_", safe_id)
+
+        if (!(button_id %in% existing)) {
+          local({
+            btn_id <- button_id
+            group_label <- label
+
+            observeEvent(input[[btn_id]], {
+              current_combined <- get_combined_groups()
+              idx <- which(vapply(current_combined, function(g) g$label == group_label, logical(1)))
+
+              if (length(idx) > 0) {
+                removed_label <- current_combined[[idx[1]]]$label
+                set_combined_groups(current_combined[-idx[1]])
+                showNotification(sprintf("Kombinerad grupp '%s' borttagen", removed_label), type = "message")
+              }
+            }, ignoreInit = TRUE)
+          })
+
+          created_observers(c(created_observers(), button_id))
+        }
+      }
+    })
+
+    output$include_total_toggle <- renderUI({
+      col_groups <- column_groups()
+      selections <- selected_group_selections()
+
+      has_selection <- any(vapply(names(col_groups), function(col) {
+        length(plot_trim_non_empty(selections[[col]])) > 0
+      }, logical(1)))
+
+      has_combined <- length(get_combined_groups()) > 0
+      if (!has_selection && !has_combined) {
+        return(NULL)
+      }
+
+      checkboxInput(
+        session$ns("include_total"),
+        label = "Inkludera totalt",
+        value = current_include_total()
+      )
+    })
+
     comparison_data <- reactive({
       req(!is.null(data))
       user_df <- data()
@@ -176,27 +363,25 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       req(length(group_defs) > 0)
 
-      valid_defs <- Filter(function(gd) {
-        is.list(gd) && !is.null(gd$col) && !is.null(gd$value) && gd$col %in% names(user_df)
-      }, group_defs)
-      req(length(valid_defs) > 0)
-
       scores <- suppressWarnings(as.numeric(state$scaled_scores))
 
-      rows <- lapply(valid_defs, function(gd) {
-        col_nm <- gd$col
-        value <- gd$value
-        label <- if (!is.null(gd$label) && nzchar(gd$label)) gd$label else paste0(col_nm, ": ", value)
+      rows <- lapply(group_defs, function(gd) {
+        if (!is.list(gd) || is.null(gd$label) || !nzchar(gd$label)) {
+          return(NULL)
+        }
 
-        group_vec <- trimws(as.character(user_df[[col_nm]]))
-        valid_idx <- !is.na(scores) & !is.na(group_vec) & nzchar(group_vec) & group_vec == value
+        idx <- plot_get_group_indices(user_df, gd)
+        if (!length(idx)) {
+          return(NULL)
+        }
 
-        if (!any(valid_idx)) {
+        valid_idx <- idx[!is.na(scores[idx])]
+        if (!length(valid_idx)) {
           return(NULL)
         }
 
         data.frame(
-          group = label,
+          group = gd$label,
           score = scores[valid_idx],
           stringsAsFactors = FALSE
         )
