@@ -526,6 +526,7 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
         range = c(-5, 105),
         tickmode = "linear",
         dtick = 10,
+        showgrid = FALSE,
         zeroline = FALSE
       ),
       yaxis = list(
@@ -534,6 +535,7 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
         tickvals = unname(y_positions),
         ticktext = names(y_positions),
         autorange = "reversed",
+        showgrid = FALSE,
         zeroline = FALSE
       ),
       hovermode = "closest",
