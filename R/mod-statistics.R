@@ -31,15 +31,6 @@ mod_statistics_ui <- function(id) {
 
 mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_tab = NULL, group_state = NULL) {
   moduleServer(id, function(input, output, session) {
-    use_shared_group_state <- inherits(group_state, "reactivevalues")
-    is_module_active <- reactive({
-      if (is.null(active_tab)) {
-        return(TRUE)
-      }
-
-      identical(active_tab(), "statistics")
-    })
-
     column_groups <- reactive({
       user_df <- if (is.null(data)) NULL else data()
       state <- current_likert_state()
@@ -48,88 +39,21 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       plot_column_groups(user_df, exclude_cols = excluded)
     })
 
-    local_combined_groups <- reactiveVal(list())
+    group_controller <- group_selection_controller(
+      input = input,
+      session = session,
+      col_groups = column_groups,
+      group_state = group_state,
+      active_tab = active_tab,
+      tab_value = "statistics",
+      include_total_input_id = "include_total"
+    )
 
-    get_combined_groups <- reactive({
-      if (!use_shared_group_state) {
-        return(local_combined_groups())
-      }
-
-      value <- group_state$combined_groups
-      if (is.list(value)) value else list()
-    })
-
-    set_combined_groups <- function(value) {
-      if (use_shared_group_state) {
-        group_state$combined_groups <- value
-      } else {
-        local_combined_groups(value)
-      }
-    }
-
-    current_include_total <- reactive({
-      if (!use_shared_group_state) {
-        return(isTRUE(input$include_total))
-      }
-
-      isTRUE(group_state$include_total)
-    })
-
-    observeEvent(input$include_total, {
-      if (!use_shared_group_state) {
-        return()
-      }
-
-      if (!isTRUE(is_module_active())) {
-        return()
-      }
-
-      value <- isTRUE(input$include_total)
-      if (!identical(isTRUE(group_state$include_total), value)) {
-        group_state$include_total <- value
-      }
-    }, ignoreInit = TRUE)
-
-    selected_group_selections <- reactive({
-      col_groups <- column_groups()
-      if (!length(col_groups)) {
-        return(list())
-      }
-
-      if (use_shared_group_state) {
-        return(plot_sanitize_group_selections(group_state$selections, col_groups))
-      }
-
-      plot_read_group_selections_from_input(input, col_groups)
-    })
-
-    input_group_selections <- reactive({
-      col_groups <- column_groups()
-      plot_read_group_selections_from_input(input, col_groups)
-    })
-
-    observeEvent(input_group_selections(), {
-      if (!use_shared_group_state) {
-        return()
-      }
-
-      if (!isTRUE(is_module_active())) {
-        return()
-      }
-
-      col_groups <- column_groups()
-      if (!length(col_groups)) {
-        if (!identical(group_state$selections, list())) {
-          group_state$selections <- list()
-        }
-        return()
-      }
-
-      input_selections <- input_group_selections()
-      if (!identical(input_selections, plot_sanitize_group_selections(group_state$selections, col_groups))) {
-        group_state$selections <- input_selections
-      }
-    }, ignoreInit = TRUE)
+    use_shared_group_state <- isTRUE(group_controller$use_shared_group_state)
+    selected_group_selections <- group_controller$selected_group_selections
+    get_combined_groups <- group_controller$get_combined_groups
+    set_combined_groups <- group_controller$set_combined_groups
+    current_include_total <- group_controller$current_include_total
 
     selected_group_definitions <- reactive({
       plot_build_selected_group_definitions(
@@ -225,14 +149,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
           options = list(plugins = list("remove_button"))
         )
       })
-    })
-
-    observe({
-      if (!use_shared_group_state) {
-        return()
-      }
-
-      updateCheckboxInput(session, "include_total", value = current_include_total())
     })
 
     observeEvent(input$add_combined_group, {

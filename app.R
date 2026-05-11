@@ -63,11 +63,7 @@ server <- function(input, output, session) {
   data_r <- data_input_r$data
   likert_state_r <- data_input_r$likert_state
 
-  shared_group_state <- reactiveValues(
-    selections = list(),
-    combined_groups = list(),
-    include_total = FALSE
-  )
+  shared_group_state <- create_group_selection_state()
 
   mod_export_server("export", data = data_r, likert_state = likert_state_r, active_tab = reactive(input$main_tab))
   mod_statistics_server(
