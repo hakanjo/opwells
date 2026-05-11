@@ -115,3 +115,45 @@ test_that("statistics module shows guidance before scaled scores exist", {
     }
   )
 })
+
+test_that("statistics module shows reference data when user data is missing", {
+  notification_log <- new.env(parent = emptyenv())
+  notification_log$messages <- character(0)
+
+  mod_env <- make_mod_statistics_env(notification_log)
+
+  mod_env$load_ref_data <- function() {
+    data.frame(
+      group = c("Ref A", "Ref B"),
+      mean = c(40, 60),
+      sd = c(8, 12),
+      median = c(41, 59),
+      `2_3_range` = c("", ""),
+      q_1_6 = c(30, 50),
+      q_5_6 = c(50, 70),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  testServer(
+    mod_env$mod_statistics_server,
+    args = list(
+      data = reactive(NULL),
+      likert_state = reactive(NULL),
+      active_tab = reactive("statistics")
+    ),
+    {
+      session$flushReact()
+
+      summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
+      expect_true(grepl("Kategori", summary_html, fixed = TRUE))
+      expect_true(grepl("Ref A", summary_html, fixed = TRUE))
+      expect_true(grepl("Ref B", summary_html, fixed = TRUE))
+
+      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      expect_true(grepl("Grupp 1", pairwise_html, fixed = TRUE))
+      expect_true(grepl("Ref A", pairwise_html, fixed = TRUE))
+      expect_true(grepl("Ref B", pairwise_html, fixed = TRUE))
+    }
+  )
+})

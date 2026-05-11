@@ -35,6 +35,19 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
     tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
 
+    ref_data <- reactive({
+      load_ref_data()
+    })
+
+    has_user_data <- reactive({
+      if (is.null(data)) {
+        return(FALSE)
+      }
+
+      user_df <- data()
+      is.data.frame(user_df) && nrow(user_df) > 0 && ncol(user_df) > 0
+    })
+
     column_groups <- reactive({
       user_df <- if (is.null(data)) NULL else data()
       state <- current_likert_state()
@@ -314,6 +327,102 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       do.call(rbind, rows)
     })
 
+    reference_statistics_raw <- reactive({
+      ref_df <- ref_data()
+
+      if (!is.data.frame(ref_df) || nrow(ref_df) == 0) {
+        return(data.frame())
+      }
+
+      required_cols <- c("group", "mean", "median", "sd", "q_1_6", "q_5_6")
+      if (!all(required_cols %in% names(ref_df))) {
+        return(data.frame())
+      }
+
+      out <- data.frame(
+        category = trimws(as.character(ref_df$group)),
+        n = NA_integer_,
+        mean = suppressWarnings(as.numeric(ref_df$mean)),
+        median = suppressWarnings(as.numeric(ref_df$median)),
+        sd = suppressWarnings(as.numeric(ref_df$sd)),
+        range_low = suppressWarnings(as.numeric(ref_df$q_1_6)),
+        range_high = suppressWarnings(as.numeric(ref_df$q_5_6)),
+        stringsAsFactors = FALSE
+      )
+
+      out <- out[!is.na(out$category) & nzchar(out$category), , drop = FALSE]
+      out <- out[order(out$category), , drop = FALSE]
+      out
+    })
+
+    reference_summary_statistics <- reactive({
+      out <- reference_statistics_raw()
+      if (!is.data.frame(out) || nrow(out) == 0) {
+        return(data.frame())
+      }
+
+      out$mean <- format_num(out$mean)
+      out$median <- format_num(out$median)
+      out$sd <- format_num(out$sd)
+      out$range_low <- format_num(out$range_low)
+      out$range_high <- format_num(out$range_high)
+
+      names(out) <- c(
+        tr("stats.summary.col.category"),
+        tr("stats.summary.col.n"),
+        tr("stats.summary.col.mean"),
+        tr("stats.summary.col.median"),
+        tr("stats.summary.col.sd"),
+        tr("stats.summary.col.range_low"),
+        tr("stats.summary.col.range_high")
+      )
+
+      out
+    })
+
+    reference_pairwise_statistics <- reactive({
+      ref_df <- reference_statistics_raw()
+      if (!is.data.frame(ref_df) || nrow(ref_df) < 2) {
+        return(data.frame())
+      }
+
+      groups <- unique(ref_df$category)
+      pairs <- utils::combn(groups, 2, simplify = FALSE)
+
+      rows <- lapply(pairs, function(grp_pair) {
+        g1 <- grp_pair[[1]]
+        g2 <- grp_pair[[2]]
+
+        x1 <- ref_df[ref_df$category == g1, , drop = FALSE][1, ]
+        x2 <- ref_df[ref_df$category == g2, , drop = FALSE][1, ]
+
+        data.frame(
+          group_1 = g1,
+          group_2 = g2,
+          n1 = NA_integer_,
+          n2 = NA_integer_,
+          mean_diff = x1$mean - x2$mean,
+          median_diff = x1$median - x2$median,
+          stringsAsFactors = FALSE
+        )
+      })
+
+      out <- do.call(rbind, rows)
+      out$mean_diff <- format_num(out$mean_diff)
+      out$median_diff <- format_num(out$median_diff)
+
+      names(out) <- c(
+        tr("stats.pairwise.col.group1"),
+        tr("stats.pairwise.col.group2"),
+        tr("stats.pairwise.col.n1"),
+        tr("stats.pairwise.col.n2"),
+        tr("stats.pairwise.col.mean_diff"),
+        tr("stats.pairwise.col.median_diff")
+      )
+
+      out
+    })
+
     summary_statistics <- reactive({
       df <- comparison_data()
       groups <- sort(unique(df$group))
@@ -405,8 +514,8 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
         showNotification(
-          tr("stats.notif.no_data"),
-          type = "warning",
+          tr("stats.notif.showing_reference"),
+          type = "message",
           duration = 3,
           id = notification_id
         )
@@ -448,6 +557,10 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     }, ignoreInit = TRUE)
 
     output$summary_statistics_ui <- renderUI({
+      if (!has_user_data()) {
+        return(build_table(reference_summary_statistics()))
+      }
+
       state <- current_likert_state()
       if (is.null(state) || is.null(state$scaled_scores)) {
         return(div(class = "text-muted", tr("stats.ui.summary.no_scores")))
@@ -462,6 +575,15 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     })
 
     output$pairwise_statistics_ui <- renderUI({
+      if (!has_user_data()) {
+        pairwise_df <- reference_pairwise_statistics()
+        if (!is.data.frame(pairwise_df) || nrow(pairwise_df) == 0) {
+          return(div(class = "text-muted", tr("stats.ui.pairwise.need_two")))
+        }
+
+        return(build_table(pairwise_df))
+      }
+
       state <- current_likert_state()
       if (is.null(state) || is.null(state$scaled_scores)) {
         return(div(class = "text-muted", tr("stats.ui.pairwise.no_scores")))
