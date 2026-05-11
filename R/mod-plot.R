@@ -3,12 +3,20 @@ plot_trim_non_empty <- function(x) {
   x_chr[!is.na(x_chr) & nzchar(x_chr)]
 }
 
-plot_candidate_group_columns <- function(user_df) {
+plot_total_group_label <- function() {
+  "Totalt"
+}
+
+plot_total_group_definition <- function() {
+  list(col = NA_character_, value = NA_character_, label = plot_total_group_label(), is_total = TRUE)
+}
+
+plot_candidate_group_columns <- function(user_df, exclude_cols = character(0)) {
   if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
     return(character(0))
   }
 
-  candidate_names <- names(user_df)
+  candidate_names <- setdiff(names(user_df), exclude_cols)
   is_group_like <- vapply(candidate_names, function(col_nm) {
     x <- user_df[[col_nm]]
     out <- tryCatch({
@@ -57,8 +65,8 @@ plot_normalize_group_selection <- function(selected, groups, target_n = 2L, allo
 }
 
 # Returns a named list: column name -> sorted unique values from that column.
-plot_column_groups <- function(user_df) {
-  cols <- plot_candidate_group_columns(user_df)
+plot_column_groups <- function(user_df, exclude_cols = character(0)) {
+  cols <- plot_candidate_group_columns(user_df, exclude_cols)
   if (!length(cols)) return(list())
   result <- lapply(cols, function(col) sort(unique(plot_trim_non_empty(user_df[[col]]))))
   names(result) <- cols
@@ -86,8 +94,21 @@ plot_parse_group_definitions <- function(selections) {
 
   lapply(defs, function(d) {
     d$label <- if (d$value %in% ambiguous) paste0(d$col, ": ", d$value) else d$value
+    d$is_total <- FALSE
     d
   })
+}
+
+plot_layers_from_selection <- function(group_definitions, show_raw = FALSE) {
+  if (!length(group_definitions)) {
+    return("reference")
+  }
+
+  if (isTRUE(show_raw)) {
+    return(c("user", "raw"))
+  }
+
+  "user"
 }
 
 # group_definitions: list of list(col=, value=, label=) produced by
@@ -103,13 +124,19 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
   score_values <- suppressWarnings(as.numeric(scores))
 
   summary_list <- lapply(group_definitions, function(gd) {
-    col   <- gd$col
-    value <- gd$value
-    label <- gd$label
-    if (!(col %in% names(user_df))) return(NULL)
+    col      <- gd$col
+    value    <- gd$value
+    label    <- gd$label
+    is_total <- isTRUE(gd$is_total)
 
-    row_vals <- trimws(as.character(user_df[[col]]))
-    idx <- which(row_vals == value)
+    if (is_total) {
+      idx <- seq_len(nrow(user_df))
+    } else {
+      if (!(col %in% names(user_df))) return(NULL)
+      row_vals <- trimws(as.character(user_df[[col]]))
+      idx <- which(row_vals == value)
+    }
+
     if (!length(idx)) return(NULL)
 
     x_clean <- score_values[idx]
@@ -119,8 +146,8 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
       return(data.frame(
         group_label = label,
         mean = NA_real_, sd = NA_real_, q_1_6 = NA_real_, q_5_6 = NA_real_,
-        n = 0L, source = "user",
-        hover_text = sprintf("<b>%s</b><br>Källa: Användardata<br>Inga giltiga poäng", label),
+        n = 0L, source = "user", is_total = is_total,
+        hover_text = sprintf("<b>%s</b><br>Inga giltiga poäng", label),
         stringsAsFactors = FALSE
       ))
     }
@@ -133,9 +160,9 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
       group_label = label,
       mean = mean_value, sd = stats::sd(x_clean),
       q_1_6 = q_low, q_5_6 = q_high, n = length(x_clean),
-      source = "user",
+      source = "user", is_total = is_total,
       hover_text = sprintf(
-        "<b>%s</b><br>Källa: Användardata<br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f<br>Antal svar: %d",
+        "<b>%s</b><br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f<br>Antal svar: %d",
         label, mean_value, q_low, q_high, length(x_clean)
       ),
       stringsAsFactors = FALSE
@@ -145,18 +172,24 @@ plot_build_user_data <- function(user_df, scores, group_definitions) {
   summary_data <- if (length(summary_list)) do.call(rbind, summary_list) else data.frame()
 
   raw_list <- lapply(group_definitions, function(gd) {
-    col   <- gd$col
-    value <- gd$value
-    label <- gd$label
-    if (!(col %in% names(user_df))) return(NULL)
+    col      <- gd$col
+    value    <- gd$value
+    label    <- gd$label
+    is_total <- isTRUE(gd$is_total)
 
-    row_vals <- trimws(as.character(user_df[[col]]))
-    idx <- which(row_vals == value)
+    if (is_total) {
+      idx <- seq_len(nrow(user_df))
+    } else {
+      if (!(col %in% names(user_df))) return(NULL)
+      row_vals <- trimws(as.character(user_df[[col]]))
+      idx <- which(row_vals == value)
+    }
+
     if (!length(idx)) return(NULL)
 
     df <- data.frame(
-      row_id = idx, group_label = label,
-      score_value = score_values[idx], source = "raw",
+      row_id = idx + 1, group_label = label,
+      score_value = score_values[idx], source = "raw", is_total = is_total,
       stringsAsFactors = FALSE
     )
     df <- df[!is.na(df$score_value), , drop = FALSE]
@@ -191,7 +224,7 @@ plot_build_reference_data <- function(ref_df, selected_groups) {
 
   ref_df$source <- "reference"
   ref_df$hover_text <- sprintf(
-    "<b>%s</b><br>Källa: Referensdata<br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f",
+    "<b>%s</b><br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f",
     ref_df$group_label,
     suppressWarnings(as.numeric(ref_df$mean)),
     suppressWarnings(as.numeric(ref_df$q_1_6)),
@@ -212,8 +245,6 @@ plot_build_status_messages <- function(layers, user_df, scores, group_definition
       messages <- c(messages, "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att visa användardata.")
     } else if (is.null(scores)) {
       messages <- c(messages, "Ingen skalad poäng beräknad för användardata.")
-    } else if (!length(group_definitions)) {
-      messages <- c(messages, "Välj grupper att visa i figuren.")
     }
   }
 
@@ -254,6 +285,15 @@ plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_
 
   ordered_groups <- unique(c(selected_labels, user_data$summary$group_label, ref_summary$group_label, user_data$raw$group_label))
   ordered_groups <- ordered_groups[!is.na(ordered_groups) & nzchar(ordered_groups)]
+
+  total_group_labels <- unique(c(
+    user_data$summary$group_label[!is.null(user_data$summary$is_total) & user_data$summary$is_total %in% TRUE],
+    user_data$raw$group_label[!is.null(user_data$raw$is_total) & user_data$raw$is_total %in% TRUE]
+  ))
+  total_group_labels <- total_group_labels[!is.na(total_group_labels) & nzchar(total_group_labels)]
+  if (length(total_group_labels)) {
+    ordered_groups <- c(total_group_labels, setdiff(ordered_groups, total_group_labels))
+  }
 
   list(
     user_summary = user_data$summary,
@@ -321,19 +361,19 @@ plot_build_plotly_figure <- function(payload) {
 
     ur <- payload$user_summary[payload$user_summary$group_label == group_label, , drop = FALSE]
     if (nrow(ur) > 0) {
-      ur$y_val  <- base_y + 0.12
+        ur$y_val  <- base_y
       user_plot <- rbind(user_plot, ur)
     }
 
     rr <- payload$ref_summary[payload$ref_summary$group_label == group_label, , drop = FALSE]
     if (nrow(rr) > 0) {
-      rr$y_val <- base_y - 0.12
+        rr$y_val <- base_y
       ref_plot <- rbind(ref_plot, rr)
     }
 
     raw <- payload$user_raw[payload$user_raw$group_label == group_label, , drop = FALSE]
     if (nrow(raw) > 0) {
-      raw$y_value <- base_y + 0.12 + plot_group_jitter(nrow(raw))
+        raw$y_value <- base_y + plot_group_jitter(nrow(raw))
       raw_plot    <- rbind(raw_plot, raw)
     }
   }
@@ -425,6 +465,7 @@ plot_build_plotly_figure <- function(payload) {
 
   fig |>
     plotly::layout(
+      showlegend = FALSE,
       xaxis = list(
         title = "",
         range = c(0, 100),
@@ -442,12 +483,11 @@ plot_build_plotly_figure <- function(payload) {
       ),
       hovermode = "closest",
       margin = list(l = 150, r = 40, t = 20, b = 80),
-      legend = list(orientation = "h", x = 0, y = -0.15),
       annotations = list(
         list(
           text = "Lägst välbefinnande",
           x = 0,
-          y = -0.14,
+          y = 0,
           xref = "x",
           yref = "paper",
           showarrow = FALSE,
@@ -457,7 +497,7 @@ plot_build_plotly_figure <- function(payload) {
         list(
           text = "Högst välbefinnande",
           x = 100,
-          y = -0.14,
+          y = 0,
           xref = "x",
           yref = "paper",
           showarrow = FALSE,
@@ -476,31 +516,23 @@ mod_plot_ui <- function(id) {
     br(),
     fluidRow(
       column(
-        width = 4,
-        p("Jämför användardata och referensdata i samma figur. Välj grupper till vänster och håll pekaren över punkter eller sammanfattningar för detaljer."),
+        width = 3,
+        p("När inga grupper är valda visas referensdata. När en eller flera grupper väljs visas användardata. Håll pekaren över punkter eller sammanfattningar för detaljer."),
         uiOutput(ns("group_selectors")),
-        checkboxGroupInput(
-          ns("data_layers"),
-          "Visa i figuren",
-          choices = c(
-            "Användardata" = "user",
-            "Referensdata" = "reference",
-            "Individuella datapunkter" = "raw"
-          ),
-          selected = c("user", "reference")
-        ),
+        uiOutput(ns("include_total_toggle")),
+        uiOutput(ns("raw_points_toggle")),
         uiOutput(ns("plot_status"))
       ),
       column(
-        width = 8,
+        width = 9,
         p("Sammanfattningsmarkören visar gruppens medelvärde. Linjen visar spannet där ungefär två tredjedelar av svaren ligger. Referensdata visas med separat symbol och linjestil."),
-        plotly::plotlyOutput(ns("comparison_plot"), height = "560px")
+        plotly::plotlyOutput(ns("comparison_plot"), height = "calc(95vh - 280px)")
       )
     )
   )
 }
 
-mod_plot_server <- function(id, data = NULL, scores = NULL) {
+mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL) {
   moduleServer(id, function(input, output, session) {
     current_scores <- reactive({
       if (is.null(scores)) {
@@ -532,8 +564,14 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
       value
     })
 
+    current_item_cols <- reactive({
+      if (is.null(item_cols)) return(character(0))
+      v <- item_cols()
+      if (is.list(v) && "selected_columns" %in% names(v)) v$selected_columns else if (is.character(v)) v else character(0)
+    })
+
     observe({
-      col_groups <- plot_column_groups(user_data())
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
       for (col in names(col_groups)) {
         input_id <- paste0("grp_", col)
         choices  <- col_groups[[col]]
@@ -544,7 +582,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
     })
 
     output$group_selectors <- renderUI({
-      col_groups <- plot_column_groups(user_data())
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
       ns <- session$ns
       if (!length(col_groups)) {
         return(p("Ladda data för att välja grupper.", style = "color: #6b6b6b;"))
@@ -562,19 +600,54 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
     })
 
     group_definitions <- reactive({
-      col_groups <- plot_column_groups(user_data())
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
       selections <- lapply(names(col_groups), function(col) input[[paste0("grp_", col)]])
       names(selections) <- names(col_groups)
       selections <- Filter(function(v) length(plot_trim_non_empty(v)) > 0, selections)
-      plot_parse_group_definitions(selections)
+      defs <- plot_parse_group_definitions(selections)
+      if (length(defs) && isTRUE(input$include_total)) {
+        defs <- c(list(plot_total_group_definition()), defs)
+      }
+      defs
+    })
+
+    output$include_total_toggle <- renderUI({
+      col_groups <- plot_column_groups(user_data(), current_item_cols())
+      has_selection <- any(vapply(names(col_groups), function(col) {
+        length(plot_trim_non_empty(input[[paste0("grp_", col)]])) > 0
+      }, logical(1)))
+      if (!has_selection) {
+        return(NULL)
+      }
+
+      current_value <- isolate(input$include_total)
+
+      checkboxInput(
+        session$ns("include_total"),
+        label = "Inkludera totalt",
+        value = isTRUE(current_value)
+      )
+    })
+
+    output$raw_points_toggle <- renderUI({
+      if (!length(group_definitions())) {
+        return(NULL)
+      }
+
+      current_value <- isolate(input$show_raw_points)
+
+      checkboxInput(
+        session$ns("show_raw_points"),
+        label = "Visa individuella datapunkter",
+        value = isTRUE(current_value)
+      )
     })
 
     plot_layers <- reactive({
-      layers <- unique(plot_trim_non_empty(input$data_layers))
-      if (!length(layers)) {
-        return(character(0))
-      }
-      layers
+      plot_layers_from_selection(
+        group_definitions = group_definitions(),
+        show_raw = isTRUE(input$show_raw_points)
+      )
     })
 
     plot_payload <- reactive({
@@ -603,7 +676,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL) {
     })
 
     list(
-      column_groups = reactive(plot_column_groups(user_data())),
+      column_groups = reactive(plot_column_groups(user_data(), current_item_cols())),
       plot_payload = plot_payload
     )
   })

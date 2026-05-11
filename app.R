@@ -64,7 +64,7 @@ server <- function(input, output, session) {
   likert_state_r <- data_input_r$likert_state
   mod_export_server("export", data = data_r, likert_state = likert_state_r, active_tab = reactive(input$main_tab))
   mod_statistics_server("statistics", data = data_r, likert_state = likert_state_r, active_tab = reactive(input$main_tab))
-  mod_plot_server("plot", data = data_r, scores = likert_state_r)
+  mod_plot_server("plot", data = data_r, scores = likert_state_r, item_cols = likert_state_r)
 }
 
 shinyApp(ui = ui, server = server)
