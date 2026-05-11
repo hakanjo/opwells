@@ -30,6 +30,7 @@ test_that("statistics module renders category summary and pairwise comparisons",
 
   user_df <- data.frame(
     grp = c("A", "B", "A", "B", "A", "B"),
+    segment = c("A", "A", "B", "B", "A", "B"),
     Q1 = c("1", "2", "2", "3", "3", "4"),
     Q2 = c("1", "2", "2", "3", "3", "4"),
     stringsAsFactors = FALSE
@@ -52,12 +53,9 @@ test_that("statistics module renders category summary and pairwise comparisons",
       session$flushReact()
 
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
-      expect_true(grepl("Välj en kategorikolumn", summary_html, fixed = TRUE))
+      expect_true(grepl("Välj minst en grupp", summary_html, fixed = TRUE))
 
-      session$setInputs(group_col = "grp")
-      session$flushReact()
-
-      session$setInputs(selected_groups = c("A", "B"))
+      session$setInputs(grp_grp = c("A", "B"))
       session$flushReact()
 
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
@@ -71,6 +69,18 @@ test_that("statistics module renders category summary and pairwise comparisons",
       expect_true(grepl("Skillnad i medel", pairwise_html, fixed = TRUE))
       expect_true(grepl("Skillnad i median", pairwise_html, fixed = TRUE))
       expect_false(grepl("p-värde", pairwise_html, fixed = TRUE))
+
+      # Same value label chosen in different columns should be disambiguated.
+      session$setInputs(grp_grp = "A", grp_segment = "A")
+      session$flushReact()
+
+      summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
+      expect_true(grepl("grp: A", summary_html, fixed = TRUE))
+      expect_true(grepl("segment: A", summary_html, fixed = TRUE))
+
+      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      expect_true(grepl("grp: A", pairwise_html, fixed = TRUE))
+      expect_true(grepl("segment: A", pairwise_html, fixed = TRUE))
     }
   )
 })

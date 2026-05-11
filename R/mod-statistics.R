@@ -8,8 +8,8 @@ mod_statistics_ui <- function(id) {
     fluidRow(
       column(
         width = 4,
-        selectInput(ns("group_col"), "Kategorikolumn", choices = c("Välj kolumn" = ""), selected = ""),
-        uiOutput(ns("group_values_ui"))
+        p("Välj en eller flera grupper i en eller flera kolumner. Valda grupper jämförs mot varandra i tabellerna till höger."),
+        uiOutput(ns("group_selectors"))
       ),
       column(
         width = 8,
@@ -58,6 +58,34 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       candidate_names[is_group_like]
     }
 
+    column_groups <- reactive({
+      user_df <- if (is.null(data)) NULL else data()
+      state <- current_likert_state()
+      excluded <- if (is.null(state) || is.null(state$selected_columns)) character(0) else state$selected_columns
+
+      cols <- detect_group_columns(user_df, excluded_cols = excluded)
+      if (!length(cols)) {
+        return(list())
+      }
+
+      groups <- lapply(cols, function(col_nm) sort(unique(trim_non_empty(user_df[[col_nm]]))))
+      names(groups) <- cols
+      groups
+    })
+
+    selected_group_definitions <- reactive({
+      col_groups <- column_groups()
+      if (!length(col_groups)) {
+        return(list())
+      }
+
+      selections <- lapply(names(col_groups), function(col_nm) input[[paste0("grp_", col_nm)]])
+      names(selections) <- names(col_groups)
+      selections <- Filter(function(v) length(trim_non_empty(v)) > 0, selections)
+
+      plot_parse_group_definitions(selections)
+    })
+
     format_num <- function(x, digits = 2) {
       ifelse(is.na(x), "", format(round(x, digits), nsmall = digits, trim = TRUE))
     }
@@ -97,76 +125,87 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     })
 
     observe({
-      user_df <- if (is.null(data)) NULL else data()
-      state <- current_likert_state()
-      excluded <- if (is.null(state)) character(0) else state$selected_columns
+      col_groups <- column_groups()
+      for (col_nm in names(col_groups)) {
+        input_id <- paste0("grp_", col_nm)
+        choices <- col_groups[[col_nm]]
+        current <- isolate(input[[input_id]])
+        valid <- current[current %in% choices]
 
-      group_cols <- detect_group_columns(user_df, excluded_cols = excluded)
-      selected <- input$group_col
-      if (is.null(selected) || !selected %in% group_cols) {
-        selected <- ""
+        updateSelectizeInput(
+          session,
+          input_id,
+          choices = choices,
+          selected = valid,
+          server = TRUE
+        )
       }
-
-      updateSelectInput(
-        session,
-        "group_col",
-        choices = c("Välj kolumn" = "", stats::setNames(group_cols, group_cols)),
-        selected = selected
-      )
     })
 
-    output$group_values_ui <- renderUI({
-      req(!is.null(data), nzchar(input$group_col))
-      user_df <- data()
-      req(is.data.frame(user_df), input$group_col %in% names(user_df))
+    output$group_selectors <- renderUI({
+      col_groups <- column_groups()
+      if (!length(col_groups)) {
+        return(p("Ladda data för att välja grupper.", style = "color: #6b6b6b;"))
+      }
 
-      groups <- sort(unique(trim_non_empty(user_df[[input$group_col]])))
-      req(length(groups) > 0)
-
-      checkboxGroupInput(
-        session$ns("selected_groups"),
-        "Kategorier att inkludera",
-        choices = groups,
-        selected = groups
-      )
+      lapply(names(col_groups), function(col_nm) {
+        selectizeInput(
+          session$ns(paste0("grp_", col_nm)),
+          label = col_nm,
+          choices = col_groups[[col_nm]],
+          selected = NULL,
+          multiple = TRUE,
+          options = list(plugins = list("remove_button"))
+        )
+      })
     })
 
     comparison_data <- reactive({
       req(!is.null(data))
       user_df <- data()
       state <- current_likert_state()
+      group_defs <- selected_group_definitions()
 
       req(
         is.data.frame(user_df),
         nrow(user_df) > 0,
         !is.null(state),
         !is.null(state$scaled_scores),
-        length(state$scaled_scores) == nrow(user_df),
-        nzchar(input$group_col),
-        input$group_col %in% names(user_df)
+        length(state$scaled_scores) == nrow(user_df)
       )
 
-      groups_all <- trim_non_empty(user_df[[input$group_col]])
-      groups_available <- sort(unique(groups_all))
+      req(length(group_defs) > 0)
 
-      selected_groups <- trim_non_empty(input$selected_groups)
-      if (!length(selected_groups)) {
-        selected_groups <- groups_available
-      }
-      selected_groups <- selected_groups[selected_groups %in% groups_available]
+      valid_defs <- Filter(function(gd) {
+        is.list(gd) && !is.null(gd$col) && !is.null(gd$value) && gd$col %in% names(user_df)
+      }, group_defs)
+      req(length(valid_defs) > 0)
 
-      group_vec <- trimws(as.character(user_df[[input$group_col]]))
       scores <- suppressWarnings(as.numeric(state$scaled_scores))
 
-      valid_idx <- !is.na(scores) & !is.na(group_vec) & nzchar(group_vec) & group_vec %in% selected_groups
-      df <- data.frame(
-        group = group_vec[valid_idx],
-        score = scores[valid_idx],
-        stringsAsFactors = FALSE
-      )
+      rows <- lapply(valid_defs, function(gd) {
+        col_nm <- gd$col
+        value <- gd$value
+        label <- if (!is.null(gd$label) && nzchar(gd$label)) gd$label else paste0(col_nm, ": ", value)
 
-      req(nrow(df) > 0)
-      df
+        group_vec <- trimws(as.character(user_df[[col_nm]]))
+        valid_idx <- !is.na(scores) & !is.na(group_vec) & nzchar(group_vec) & group_vec == value
+
+        if (!any(valid_idx)) {
+          return(NULL)
+        }
+
+        data.frame(
+          group = label,
+          score = scores[valid_idx],
+          stringsAsFactors = FALSE
+        )
+      })
+
+      rows <- Filter(Negate(is.null), rows)
+      req(length(rows) > 0)
+
+      do.call(rbind, rows)
     })
 
     summary_statistics <- reactive({
@@ -289,8 +328,8 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         return(div(class = "text-muted", "Skalad poäng saknas. Beräkna poäng för att visa statistik per kategori."))
       }
 
-      if (is.null(input$group_col) || !nzchar(input$group_col)) {
-        return(div(class = "text-muted", "Välj en kategorikolumn för att visa statistik per kategori."))
+      if (!length(selected_group_definitions())) {
+        return(div(class = "text-muted", "Välj minst en grupp för att visa statistik per kategori."))
       }
 
       stats_df <- summary_statistics()
@@ -303,8 +342,8 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         return(div(class = "text-muted", "Skalad poäng saknas. Beräkna poäng för att visa parvisa jämförelser."))
       }
 
-      if (is.null(input$group_col) || !nzchar(input$group_col)) {
-        return(div(class = "text-muted", "Välj en kategorikolumn för att visa parvisa jämförelser."))
+      if (!length(selected_group_definitions())) {
+        return(div(class = "text-muted", "Välj minst två grupper för att visa parvisa jämförelser."))
       }
 
       pairwise_df <- pairwise_statistics()
