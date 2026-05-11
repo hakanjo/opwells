@@ -186,6 +186,29 @@ test_that("plot_build_combined_payload returns reference data when no groups are
   expect_equal(nrow(payload$user_raw), 0L)
 })
 
+test_that("plot_build_combined_payload filters reference overlay by selected reference groups", {
+  mod_env <- make_mod_plot_env()
+
+  payload <- mod_env$plot_build_combined_payload(
+    user_df = data.frame(grp = c("A", "B", "A"), stringsAsFactors = FALSE),
+    scores = c(10, 20, 30),
+    group_definitions = mod_env$plot_parse_group_definitions(list(grp = c("A", "B"))),
+    ref_df = data.frame(
+      group = c("Ref A", "Ref B"),
+      mean = c(55, 62),
+      sd = c(8, 9),
+      q_1_6 = c(47, 54),
+      q_5_6 = c(63, 70),
+      stringsAsFactors = FALSE
+    ),
+    layers = c("user", "reference"),
+    selected_reference_groups = "Ref B"
+  )
+
+  expect_equal(sort(unique(payload$user_summary$group_label)), c("A", "B"))
+  expect_equal(sort(unique(payload$ref_summary$group_label)), "Ref B")
+})
+
 test_that("plot_build_plotly_figure returns a plotly widget with traces", {
   skip_if_not_installed("plotly")
   mod_env <- make_mod_plot_env()

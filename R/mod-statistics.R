@@ -11,6 +11,7 @@ mod_statistics_ui <- function(id, lang = i18n_default_language) {
         width = 4,
         p(tr("stats.ui.left_intro")),
         uiOutput(ns("group_selectors")),
+        uiOutput(ns("reference_group_selector")),
         hr(),
         p(strong(tr("stats.ui.combine.title")), style = "margin-top: 20px;"),
         p(tr("stats.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
@@ -56,10 +57,13 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       plot_column_groups(user_df, exclude_cols = excluded)
     })
 
+    ref_group_choices <- reactive(plot_reference_group_choices(ref_data()))
+
     group_controller <- group_selection_controller(
       input = input,
       session = session,
       col_groups = column_groups,
+      ref_group_choices = ref_group_choices,
       group_state = group_state,
       active_tab = active_tab,
       tab_value = "statistics",
@@ -71,6 +75,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     get_combined_groups <- group_controller$get_combined_groups
     set_combined_groups <- group_controller$set_combined_groups
     current_include_total <- group_controller$current_include_total
+    current_reference_groups <- group_controller$current_reference_groups
 
     selected_group_definitions <- reactive({
       plot_build_selected_group_definitions(
@@ -169,6 +174,26 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       })
     })
 
+    output$reference_group_selector <- renderUI({
+      if (!has_user_data()) {
+        return(NULL)
+      }
+
+      choices <- ref_group_choices()
+      if (!length(choices)) {
+        return(NULL)
+      }
+
+      selectizeInput(
+        session$ns("reference_groups"),
+        label = tr("stats.ui.reference_groups"),
+        choices = choices,
+        selected = current_reference_groups(),
+        multiple = TRUE,
+        options = list(plugins = list("remove_button"))
+      )
+    })
+
     observeEvent(input$add_combined_group, {
       label <- trimws(input$combined_group_label)
       if (!nzchar(label)) {
@@ -262,18 +287,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     })
 
     output$include_total_toggle <- renderUI({
-      col_groups <- column_groups()
-      selections <- selected_group_selections()
-
-      has_selection <- any(vapply(names(col_groups), function(col) {
-        length(plot_trim_non_empty(selections[[col]])) > 0
-      }, logical(1)))
-
-      has_combined <- length(get_combined_groups()) > 0
-      if (!has_selection && !has_combined) {
-        return(NULL)
-      }
-
       checkboxInput(
         session$ns("include_total"),
         label = tr("stats.ui.include_total"),
@@ -463,29 +476,71 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
     pairwise_statistics <- reactive({
       df <- comparison_data()
-      groups <- sort(unique(df$group))
+      user_groups <- sort(unique(df$group))
+      ref_groups <- current_reference_groups()
+      ref_stats <- reference_statistics_raw()
 
-      if (length(groups) < 2) {
+      all_groups <- c(user_groups, ref_groups)
+      if (length(all_groups) < 2) {
         return(data.frame())
       }
 
-      pairs <- utils::combn(groups, 2, simplify = FALSE)
+      pairs <- utils::combn(all_groups, 2, simplify = FALSE)
       rows <- lapply(pairs, function(grp_pair) {
         g1 <- grp_pair[[1]]
         g2 <- grp_pair[[2]]
-        x1 <- df$score[df$group == g1]
-        x2 <- df$score[df$group == g2]
 
-        data.frame(
-          group_1 = g1,
-          group_2 = g2,
-          n1 = length(x1),
-          n2 = length(x2),
-          mean_diff = mean(x1) - mean(x2),
-          median_diff = stats::median(x1) - stats::median(x2),
-          stringsAsFactors = FALSE
-        )
+        is_g1_user <- g1 %in% user_groups
+        is_g2_user <- g2 %in% user_groups
+        is_g1_ref <- g1 %in% ref_groups
+        is_g2_ref <- g2 %in% ref_groups
+
+        if (is_g1_user && is_g2_user) {
+          x1 <- df$score[df$group == g1]
+          x2 <- df$score[df$group == g2]
+          data.frame(
+            group_1 = g1,
+            group_2 = g2,
+            n1 = length(x1),
+            n2 = length(x2),
+            mean_diff = mean(x1) - mean(x2),
+            median_diff = stats::median(x1) - stats::median(x2),
+            stringsAsFactors = FALSE
+          )
+        } else if ((is_g1_user && is_g2_ref) || (is_g1_ref && is_g2_user)) {
+          if (is_g1_ref) {
+            temp <- g1
+            g1 <- g2
+            g2 <- temp
+            is_g1_user <- TRUE
+            is_g2_ref <- TRUE
+          }
+
+          x1 <- df$score[df$group == g1]
+          ref_row <- ref_stats[ref_stats$category == g2, , drop = FALSE]
+
+          if (nrow(ref_row) == 0) {
+            return(NULL)
+          }
+
+          data.frame(
+            group_1 = g1,
+            group_2 = g2,
+            n1 = length(x1),
+            n2 = NA_integer_,
+            mean_diff = mean(x1) - ref_row$mean[1],
+            median_diff = stats::median(x1) - ref_row$median[1],
+            stringsAsFactors = FALSE
+          )
+        } else {
+          NULL
+        }
       })
+
+      rows <- Filter(Negate(is.null), rows)
+      if (length(rows) == 0) {
+        return(data.frame())
+      }
 
       out <- do.call(rbind, rows)
       out$mean_diff <- format_num(out$mean_diff)
@@ -567,7 +622,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       if (!length(selected_group_definitions())) {
-        return(div(class = "text-muted", tr("stats.ui.summary.no_groups")))
+        return(build_table(reference_summary_statistics()))
       }
 
       stats_df <- summary_statistics()
@@ -576,12 +631,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
     output$pairwise_statistics_ui <- renderUI({
       if (!has_user_data()) {
-        pairwise_df <- reference_pairwise_statistics()
-        if (!is.data.frame(pairwise_df) || nrow(pairwise_df) == 0) {
-          return(div(class = "text-muted", tr("stats.ui.pairwise.need_two")))
-        }
-
-        return(build_table(pairwise_df))
+        return(NULL)
       }
 
       state <- current_likert_state()
@@ -590,7 +640,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       if (!length(selected_group_definitions())) {
-        return(div(class = "text-muted", tr("stats.ui.pairwise.no_groups")))
+        return(NULL)
       }
 
       pairwise_df <- pairwise_statistics()

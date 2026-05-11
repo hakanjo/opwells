@@ -72,6 +72,14 @@ plot_column_groups <- function(user_df, exclude_cols = character(0)) {
   result
 }
 
+plot_reference_group_choices <- function(ref_df) {
+  if (!is.data.frame(ref_df) || nrow(ref_df) == 0 || !("group" %in% names(ref_df))) {
+    return(character(0))
+  }
+
+  sort(unique(plot_trim_non_empty(ref_df$group)))
+}
+
 plot_sanitize_group_selections <- function(selections, col_groups) {
   if (!is.list(selections) || !length(col_groups)) {
     return(list())
@@ -126,7 +134,7 @@ plot_build_selected_group_definitions <- function(selections, combined_groups = 
     defs <- c(defs, combined_groups)
   }
 
-  if (length(defs) && isTRUE(include_total)) {
+  if (isTRUE(include_total)) {
     defs <- c(list(plot_total_group_definition(lang)), defs)
   }
 
@@ -277,7 +285,7 @@ plot_build_reference_data <- function(ref_df, selected_groups, lang = i18n_defau
   ref_df
 }
 
-plot_build_status_messages <- function(layers, user_df, scores, group_definitions, ref_summary, lang = i18n_default_language) {
+plot_build_status_messages <- function(layers, user_df, scores, group_definitions, ref_summary, selected_reference_groups = character(0), lang = i18n_default_language) {
   messages <- character(0)
 
   show_user <- "user" %in% layers || "raw" %in% layers
@@ -297,8 +305,10 @@ plot_build_status_messages <- function(layers, user_df, scores, group_definition
     character(0)
   }
 
-  if (show_ref && length(selected_labels) && is.data.frame(ref_summary) && nrow(ref_summary) > 0) {
-    missing_groups <- setdiff(selected_labels, unique(ref_summary$group_label))
+  if (show_ref) {
+    selected_reference_groups <- unique(plot_trim_non_empty(selected_reference_groups))
+    expected_ref_labels <- if (length(selected_reference_groups)) selected_reference_groups else selected_labels
+    missing_groups <- setdiff(expected_ref_labels, unique(ref_summary$group_label))
     if (length(missing_groups)) {
       messages <- c(messages, i18n_t(lang, "plot.status.missing_reference", paste(missing_groups, collapse = ", ")))
     }
@@ -307,7 +317,7 @@ plot_build_status_messages <- function(layers, user_df, scores, group_definition
   unique(messages)
 }
 
-plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_df, layers, lang = i18n_default_language) {
+plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_df, layers, selected_reference_groups = character(0), lang = i18n_default_language) {
   layers <- unique(plot_trim_non_empty(layers))
   user_data <- list(summary = data.frame(), raw = data.frame())
   ref_summary <- data.frame()
@@ -323,7 +333,12 @@ plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_
   }
 
   if ("reference" %in% layers) {
-    ref_summary <- plot_build_reference_data(ref_df, selected_labels, lang = lang)
+    selected_ref_labels <- unique(plot_trim_non_empty(selected_reference_groups))
+    if (!length(selected_ref_labels)) {
+      selected_ref_labels <- selected_labels
+    }
+
+    ref_summary <- plot_build_reference_data(ref_df, selected_ref_labels, lang = lang)
   }
 
   ordered_groups <- unique(c(selected_labels, user_data$summary$group_label, ref_summary$group_label, user_data$raw$group_label))
@@ -349,6 +364,7 @@ plot_build_combined_payload <- function(user_df, scores, group_definitions, ref_
       scores = scores,
       group_definitions = group_definitions,
       ref_summary = ref_summary,
+      selected_reference_groups = selected_reference_groups,
       lang = lang
     )
   )
@@ -559,6 +575,7 @@ mod_plot_ui <- function(id, lang = i18n_default_language) {
         width = 3,
         p(tr("plot.ui.left_intro")),
         uiOutput(ns("group_selectors")),
+        uiOutput(ns("reference_group_selector")),
         hr(),
         p(strong(tr("plot.ui.combine.title")), style = "margin-top: 20px;"),
         p(tr("plot.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
@@ -621,11 +638,13 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     col_groups <- reactive(plot_column_groups(user_data(), current_item_cols()))
+    ref_group_choices <- reactive(plot_reference_group_choices(ref_data()))
 
     group_controller <- group_selection_controller(
       input = input,
       session = session,
       col_groups = col_groups,
+      ref_group_choices = ref_group_choices,
       group_state = group_state,
       active_tab = active_tab,
       tab_value = "plot",
@@ -637,6 +656,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     get_combined_groups <- group_controller$get_combined_groups
     set_combined_groups <- group_controller$set_combined_groups
     current_include_total <- group_controller$current_include_total
+    current_reference_groups <- group_controller$current_reference_groups
 
     observe({
       groups <- col_groups()
@@ -679,6 +699,26 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
           options = list(plugins = list("remove_button"))
         )
       })
+    })
+
+    output$reference_group_selector <- renderUI({
+      if (is.null(user_data())) {
+        return(NULL)
+      }
+
+      choices <- ref_group_choices()
+      if (!length(choices)) {
+        return(NULL)
+      }
+
+      selectizeInput(
+        session$ns("reference_groups"),
+        label = tr("plot.ui.reference_groups"),
+        choices = choices,
+        selected = current_reference_groups(),
+        multiple = TRUE,
+        options = list(plugins = list("remove_button"))
+      )
     })
 
     group_definitions <- reactive({
@@ -790,18 +830,6 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     output$include_total_toggle <- renderUI({
-      groups <- col_groups()
-      selections <- selected_group_selections()
-      has_selection <- any(vapply(names(groups), function(col) {
-        length(plot_trim_non_empty(selections[[col]])) > 0
-      }, logical(1)))
-
-      has_combined <- length(get_combined_groups()) > 0
-
-      if (!has_selection && !has_combined) {
-        return(NULL)
-      }
-
       current_value <- current_include_total()
 
       checkboxInput(
@@ -826,10 +854,24 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     plot_layers <- reactive({
-      plot_layers_from_selection(
-        group_definitions = group_definitions(),
-        show_raw = isTRUE(input$show_raw_points)
-      )
+      has_user_groups <- length(group_definitions()) > 0
+      has_reference_groups <- length(current_reference_groups()) > 0
+
+      layers <- character(0)
+      if (has_user_groups) {
+        layers <- c(layers, "user")
+        if (isTRUE(input$show_raw_points)) {
+          layers <- c(layers, "raw")
+        }
+
+        if (has_reference_groups) {
+          layers <- c(layers, "reference")
+        }
+      } else {
+        layers <- c(layers, "reference")
+      }
+
+      unique(layers)
     })
 
     plot_payload <- reactive({
@@ -839,6 +881,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         group_definitions = group_definitions(),
         ref_df = ref_data(),
         layers = plot_layers(),
+        selected_reference_groups = current_reference_groups(),
         lang = resolved_lang()
       )
     })

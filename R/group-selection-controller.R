@@ -2,7 +2,8 @@ create_group_selection_state <- function() {
   reactiveValues(
     selections = list(),
     combined_groups = list(),
-    include_total = FALSE
+    include_total = FALSE,
+    reference_groups = character(0)
   )
 }
 
@@ -10,10 +11,12 @@ group_selection_controller <- function(
   input,
   session,
   col_groups,
+  ref_group_choices = NULL,
   group_state = NULL,
   active_tab = NULL,
   tab_value = NULL,
-  include_total_input_id = "include_total"
+  include_total_input_id = "include_total",
+  reference_groups_input_id = "reference_groups"
 ) {
   use_shared_group_state <- inherits(group_state, "reactivevalues")
   local_combined_groups <- reactiveVal(list())
@@ -51,6 +54,27 @@ group_selection_controller <- function(
     isTRUE(group_state$include_total)
   })
 
+  current_reference_groups <- reactive({
+    choices <- if (is.null(ref_group_choices)) {
+      character(0)
+    } else {
+      unique(plot_trim_non_empty(ref_group_choices()))
+    }
+
+    if (!length(choices)) {
+      return(character(0))
+    }
+
+    selected <- if (use_shared_group_state) {
+      group_state$reference_groups
+    } else {
+      input[[reference_groups_input_id]]
+    }
+
+    selected <- unique(plot_trim_non_empty(selected))
+    selected[selected %in% choices]
+  })
+
   observeEvent(input[[include_total_input_id]], {
     if (!use_shared_group_state) {
       return()
@@ -65,6 +89,32 @@ group_selection_controller <- function(
       group_state$include_total <- value
     }
   }, ignoreInit = TRUE)
+
+  observeEvent(input[[reference_groups_input_id]], {
+    if (!use_shared_group_state) {
+      return()
+    }
+
+    if (!isTRUE(is_module_active())) {
+      return()
+    }
+
+    choices <- if (is.null(ref_group_choices)) {
+      character(0)
+    } else {
+      unique(plot_trim_non_empty(ref_group_choices()))
+    }
+
+    selected <- unique(plot_trim_non_empty(input[[reference_groups_input_id]]))
+    selected <- selected[selected %in% choices]
+
+    current <- unique(plot_trim_non_empty(group_state$reference_groups))
+    current <- current[current %in% choices]
+
+    if (!identical(current, selected)) {
+      group_state$reference_groups <- selected
+    }
+  }, ignoreInit = TRUE, ignoreNULL = FALSE)
 
   selected_group_selections <- reactive({
     groups <- col_groups()
@@ -114,6 +164,29 @@ group_selection_controller <- function(
     }
 
     updateCheckboxInput(session, include_total_input_id, value = current_include_total())
+
+    choices <- if (is.null(ref_group_choices)) {
+      character(0)
+    } else {
+      unique(plot_trim_non_empty(ref_group_choices()))
+    }
+
+    selected <- current_reference_groups()
+    current_input <- isolate(input[[reference_groups_input_id]])
+
+    current_norm <- sort(unique(plot_trim_non_empty(current_input)))
+    selected_norm <- sort(unique(plot_trim_non_empty(selected)))
+
+    if (!identical(current_norm, selected_norm)) {
+      freezeReactiveValue(input, reference_groups_input_id)
+      updateSelectizeInput(
+        session,
+        reference_groups_input_id,
+        choices = choices,
+        selected = selected,
+        server = TRUE
+      )
+    }
   })
 
   list(
@@ -121,6 +194,7 @@ group_selection_controller <- function(
     selected_group_selections = selected_group_selections,
     get_combined_groups = get_combined_groups,
     set_combined_groups = set_combined_groups,
-    current_include_total = current_include_total
+    current_include_total = current_include_total,
+    current_reference_groups = current_reference_groups
   )
 }

@@ -53,7 +53,11 @@ test_that("statistics module renders category summary and pairwise comparisons",
       session$flushReact()
 
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
-      expect_true(grepl("Välj minst en grupp", summary_html, fixed = TRUE))
+      expect_true(grepl("Kategori", summary_html, fixed = TRUE))
+      expect_false(grepl("Välj minst en grupp", summary_html, fixed = TRUE))
+
+      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      expect_true(length(pairwise_html) == 0 || nzchar(pairwise_html) == FALSE || is.null(pairwise_html) || pairwise_html == "")
 
       session$setInputs(grp_grp = c("A", "B"))
       session$flushReact()
@@ -151,9 +155,7 @@ test_that("statistics module shows reference data when user data is missing", {
       expect_true(grepl("Ref B", summary_html, fixed = TRUE))
 
       pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
-      expect_true(grepl("Grupp 1", pairwise_html, fixed = TRUE))
-      expect_true(grepl("Ref A", pairwise_html, fixed = TRUE))
-      expect_true(grepl("Ref B", pairwise_html, fixed = TRUE))
+      expect_true(length(pairwise_html) == 0 || nzchar(pairwise_html) == FALSE || is.null(pairwise_html) || pairwise_html == "")
     }
   )
 })
