@@ -47,7 +47,6 @@ test_that("define groups module can add and remove combined groups in shared sta
       data = reactive(user_df),
       likert_state = reactive(list(selected_columns = "Q1")),
       group_state = shared_group_state,
-      active_tab = reactive("define_groups"),
       lang = reactive("sv")
     ),
     {

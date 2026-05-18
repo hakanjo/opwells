@@ -56,7 +56,7 @@ test_that("statistics module renders category summary and pairwise comparisons",
       expect_true(grepl("Kategori", summary_html, fixed = TRUE))
       expect_false(grepl("Välj minst en grupp", summary_html, fixed = TRUE))
 
-      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
       expect_true(length(pairwise_html) == 0 || nzchar(pairwise_html) == FALSE || is.null(pairwise_html) || pairwise_html == "")
 
       session$setInputs(grp_grp = c("A", "B"))
@@ -68,7 +68,7 @@ test_that("statistics module renders category summary and pairwise comparisons",
       expect_true(grepl(">B<", summary_html))
       expect_true(grepl("2/3 nedre", summary_html, fixed = TRUE))
 
-      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
       expect_true(grepl("Grupp 1", pairwise_html, fixed = TRUE))
       expect_true(grepl("Skillnad i medel", pairwise_html, fixed = TRUE))
       expect_true(grepl("Skillnad i median", pairwise_html, fixed = TRUE))
@@ -82,7 +82,7 @@ test_that("statistics module renders category summary and pairwise comparisons",
       expect_true(grepl("grp: A", summary_html, fixed = TRUE))
       expect_true(grepl("segment: A", summary_html, fixed = TRUE))
 
-      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
       expect_true(grepl("grp: A", pairwise_html, fixed = TRUE))
       expect_true(grepl("segment: A", pairwise_html, fixed = TRUE))
     }
@@ -114,8 +114,8 @@ test_that("statistics module shows guidance before scaled scores exist", {
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
       expect_true(grepl("Skalad poäng saknas", summary_html, fixed = TRUE))
 
-      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
-      expect_true(grepl("Skalad poäng saknas", pairwise_html, fixed = TRUE))
+      pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
+      expect_true(length(pairwise_html) == 0 || nzchar(pairwise_html) == FALSE || is.null(pairwise_html) || pairwise_html == "")
     }
   )
 })
@@ -154,7 +154,7 @@ test_that("statistics module shows reference data when user data is missing", {
       expect_true(grepl("Ref A", summary_html, fixed = TRUE))
       expect_true(grepl("Ref B", summary_html, fixed = TRUE))
 
-      pairwise_html <- paste(as.character(output$pairwise_statistics_ui), collapse = "")
+      pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
       expect_true(length(pairwise_html) == 0 || nzchar(pairwise_html) == FALSE || is.null(pairwise_html) || pairwise_html == "")
     }
   )

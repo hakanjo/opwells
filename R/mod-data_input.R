@@ -112,7 +112,7 @@ mod_data_input_server <- function(id, lang = NULL) {
       raw_df <- coerce_to_character_df(raw_df)
 
       if (!ncol(raw_df)) {
-        return(list(data = raw_df, header_row = character(0)))
+        return(raw_df)
       }
 
       header_row <- if (nrow(raw_df) > 0) {
@@ -125,7 +125,7 @@ mod_data_input_server <- function(id, lang = NULL) {
       df <- if (nrow(raw_df) > 1) raw_df[-1, , drop = FALSE] else raw_df[FALSE, , drop = FALSE]
       names(df) <- normalize_names(header_row, default_column_names(ncol(raw_df)))
 
-      list(data = df, header_row = header_row)
+      df
     }
 
     trim_empty_rows_cols <- function(df) {
@@ -218,10 +218,10 @@ mod_data_input_server <- function(id, lang = NULL) {
       )
 
       validate(
-        need(!is.null(parsed) && ncol(parsed$data) > 0, tr("data_input.validation.parse_fail"))
+        need(!is.null(parsed) && ncol(parsed) > 0, tr("data_input.validation.parse_fail"))
       )
 
-      df <- trim_empty_rows_cols(parsed$data)
+      df <- trim_empty_rows_cols(parsed)
       current_data(df)
 
       auto_cols <- auto_select_cols(names(df))

@@ -11,7 +11,7 @@ mod_export_ui <- function(id, lang = i18n_default_language) {
   )
 }
 
-mod_export_server <- function(id, data, likert_state, active_tab = NULL, lang = NULL) {
+mod_export_server <- function(id, data, likert_state, lang = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
@@ -89,38 +89,6 @@ mod_export_server <- function(id, data, likert_state, active_tab = NULL, lang = 
         writexl::write_xlsx(result_df, path = file)
       }
     )
-
-    if (!is.null(active_tab)) {
-      observeEvent(active_tab(), {
-        if (!identical(active_tab(), "export")) {
-          return()
-        }
-
-        notification_id <- ns("export_prompt")
-
-        if (!has_export_data()) {
-          showNotification(
-            tr("export.notif.no_data"),
-            type = "warning",
-            duration = 3,
-            id = notification_id
-          )
-          return()
-        }
-
-        if (!length(current_selected_columns())) {
-          showNotification(
-            tr("export.notif.no_cols"),
-            type = "message",
-            duration = 4,
-            id = notification_id
-          )
-          return()
-        }
-
-        removeNotification(notification_id)
-      }, ignoreInit = TRUE)
-    }
 
     output$export_status <- renderUI({
       if (!has_export_data()) {

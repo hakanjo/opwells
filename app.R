@@ -1,10 +1,5 @@
 # Load packages
 library(shiny)
-library(bslib)
-library(readxl)
-library(rhandsontable)
-library(ggplot2)
-library(plotly)
 
 # Load additional functions
 file_list <- list.files(
@@ -127,7 +122,6 @@ server <- function(input, output, session) {
     "export",
     data = data_r,
     likert_state = likert_state_r,
-    active_tab = NULL,
     lang = current_language
   )
   mod_statistics_server(
@@ -143,7 +137,6 @@ server <- function(input, output, session) {
     data = data_r,
     likert_state = likert_state_r,
     group_state = shared_group_state,
-    active_tab = reactive(input$main_tab),
     lang = current_language
   )
   mod_plot_server(

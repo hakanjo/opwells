@@ -38,14 +38,6 @@ group_selection_controller <- function(
     if (is.list(value)) value else list()
   })
 
-  set_combined_groups <- function(value) {
-    if (use_shared_group_state) {
-      group_state$combined_groups <- value
-    } else {
-      local_combined_groups(value)
-    }
-  }
-
   current_include_total <- reactive({
     if (!use_shared_group_state) {
       return(isTRUE(input[[include_total_input_id]]))
@@ -193,7 +185,6 @@ group_selection_controller <- function(
     use_shared_group_state = use_shared_group_state,
     selected_group_selections = selected_group_selections,
     get_combined_groups = get_combined_groups,
-    set_combined_groups = set_combined_groups,
     current_include_total = current_include_total,
     current_reference_groups = current_reference_groups
   )

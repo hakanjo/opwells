@@ -118,7 +118,8 @@ test_that("plot_build_combined_payload assembles user, raw, and reference layers
   expect_equal(nrow(payload$ref_summary), 2L)
   expect_equal(nrow(payload$user_raw), 4L)
   expect_true(all(c("hover_text", "row_id", "score_value") %in% names(payload$user_raw)))
-  expect_match(payload$user_raw$hover_text[1], "Rad: 1")
+  expect_equal(payload$user_raw$row_id[1], 2L)
+  expect_match(payload$user_raw$hover_text[1], "Rad: 2")
 })
 
 test_that("plot_build_user_data can include a total user row", {

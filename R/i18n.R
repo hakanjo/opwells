@@ -5,7 +5,6 @@ i18n_locales <- list(
   sv = list(
     "lang.swedish" = "Svenska",
     "lang.english" = "Engelska",
-    "app.language_label" = "Språk",
     "app.title" = "Äldres välbefinnande - OPWELLS",
     "app.intro.li1" = "OPWELLS är en enkät baserad på 10 frågor för att mäta äldres välbefinnande. OPWELLS är en förkortning för enkätens engelska benämning, Older Persons Wellbeing Scale.",
     "app.intro.li2" = "Denna webbapplikation möjliggör att ta fram mått på välbefinnande från individers enkätsvar.",
@@ -19,7 +18,6 @@ i18n_locales <- list(
     "app.tab.define_groups" = "Definiera nya grupper",
     "app.tab.plot" = "Illustrationer",
     "app.tab.statistics" = "Statistiska jämförelser",
-    "app.tab.export" = "Exporter",
     "data_input.help.main" = "Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).",
     "data_input.help.format" = "Din fil för uppladdning ska innehålla varsin kolumn för respektive OPWELLS-fråga som benämns OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2 etc. Därtill kan du ladda upp ytterligare variabler för de gruppjämförelser du vill göra, exempelvis tidpunkt, kön, åldersgrupp.",
     "data_input.help.template_prefix" = "Använd gärna denna mall för ditt data ",
@@ -136,7 +134,6 @@ i18n_locales <- list(
   en = list(
     "lang.swedish" = "Swedish",
     "lang.english" = "English",
-    "app.language_label" = "Language",
     "app.title" = "Older Wellbeing - OPWELLS",
     "app.intro.li1" = "OPWELLS is a questionnaire based on 10 items to measure older persons' wellbeing. OPWELLS is an acronym for the English name Older Persons Wellbeing Scale.",
     "app.intro.li2" = "This web application makes it possible to generate wellbeing measures from individual questionnaire responses.",
@@ -150,7 +147,6 @@ i18n_locales <- list(
     "app.tab.define_groups" = "Define new groups",
     "app.tab.plot" = "Visualizations",
     "app.tab.statistics" = "Statistical comparisons",
-    "app.tab.export" = "Exports",
     "data_input.help.main" = "Upload a data file (.xlsx, .csv, .tsv, or .txt).",
     "data_input.help.format" = "The uploaded file should include one column per OPWELLS item named OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2, etc. You may also upload additional variables for group comparisons, for example timepoint, sex, or age group.",
     "data_input.help.template_prefix" = "You can use this upload template ",
@@ -297,15 +293,6 @@ i18n_t <- function(lang, key, ...) {
   }
 
   do.call(sprintf, c(list(template), dots))
-}
-
-i18n_language_choices <- function(lang) {
-  lang <- i18n_normalize_language(lang)
-
-  stats::setNames(
-    c("sv", "en"),
-    c(i18n_t(lang, "lang.swedish"), i18n_t(lang, "lang.english"))
-  )
 }
 
 i18n_format_number <- function(x, lang, digits = 2) {

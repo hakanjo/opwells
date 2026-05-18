@@ -26,7 +26,7 @@ mod_define_groups_ui <- function(id, lang = i18n_default_language) {
   )
 }
 
-mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group_state = NULL, active_tab = NULL, lang = NULL) {
+mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group_state = NULL, lang = NULL) {
   moduleServer(id, function(input, output, session) {
     resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
     tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)

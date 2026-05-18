@@ -299,13 +299,13 @@ plot_build_user_data <- function(user_df, scores, group_definitions, lang = i18n
     if (!length(idx)) return(NULL)
 
     df <- data.frame(
-      row_id = idx, group_label = label,
+      row_id = idx + 1L, group_label = label,
       score_value = score_values[idx], source = "raw", is_total = is_total,
       stringsAsFactors = FALSE
     )
     df <- df[!is.na(df$score_value), , drop = FALSE]
     if (!nrow(df)) return(NULL)
-    df$hover_text <- i18n_t(lang, "plot.hover.raw", df$group_label, df$row_id + 1, df$score_value)
+    df$hover_text <- i18n_t(lang, "plot.hover.raw", df$group_label, df$row_id, df$score_value)
     df
   })
   raw_list <- Filter(Negate(is.null), raw_list)
@@ -921,9 +921,5 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       plot_build_plotly_figure(plot_payload(), lang = resolved_lang())
     })
 
-    list(
-      column_groups = col_groups,
-      plot_payload = plot_payload
-    )
   })
 }

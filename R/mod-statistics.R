@@ -326,49 +326,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       out
     })
 
-    reference_pairwise_statistics <- reactive({
-      ref_df <- reference_statistics_raw()
-      if (!is.data.frame(ref_df) || nrow(ref_df) < 2) {
-        return(data.frame())
-      }
-
-      groups <- unique(ref_df$category)
-      pairs <- utils::combn(groups, 2, simplify = FALSE)
-
-      rows <- lapply(pairs, function(grp_pair) {
-        g1 <- grp_pair[[1]]
-        g2 <- grp_pair[[2]]
-
-        x1 <- ref_df[ref_df$category == g1, , drop = FALSE][1, ]
-        x2 <- ref_df[ref_df$category == g2, , drop = FALSE][1, ]
-
-        data.frame(
-          group_1 = g1,
-          group_2 = g2,
-          n1 = NA_integer_,
-          n2 = NA_integer_,
-          mean_diff = x1$mean - x2$mean,
-          median_diff = x1$median - x2$median,
-          stringsAsFactors = FALSE
-        )
-      })
-
-      out <- do.call(rbind, rows)
-      out$mean_diff <- format_num(out$mean_diff)
-      out$median_diff <- format_num(out$median_diff)
-
-      names(out) <- c(
-        tr("stats.pairwise.col.group1"),
-        tr("stats.pairwise.col.group2"),
-        tr("stats.pairwise.col.n1"),
-        tr("stats.pairwise.col.n2"),
-        tr("stats.pairwise.col.mean_diff"),
-        tr("stats.pairwise.col.median_diff")
-      )
-
-      out
-    })
-
     summary_statistics <- reactive({
       df <- comparison_data()
       groups <- sort(unique(df$group))
@@ -634,26 +591,5 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       build_table(stats_df)
     })
 
-    output$pairwise_statistics_ui <- renderUI({
-      if (!has_user_data()) {
-        return(NULL)
-      }
-
-      state <- current_likert_state()
-      if (is.null(state) || is.null(state$scaled_scores)) {
-        return(div(class = "text-muted", tr("stats.ui.pairwise.no_scores")))
-      }
-
-      if (!length(selected_group_definitions())) {
-        return(NULL)
-      }
-
-      pairwise_df <- pairwise_statistics()
-      if (!is.data.frame(pairwise_df) || nrow(pairwise_df) == 0) {
-        return(div(class = "text-muted", tr("stats.ui.pairwise.need_two")))
-      }
-
-      build_table(pairwise_df)
-    })
   })
 }
