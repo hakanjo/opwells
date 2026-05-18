@@ -640,7 +640,7 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
           title = "Download plot as PNG",
           icon = htmlwidgets::JS("Plotly.Icons.camera"),
           click = htmlwidgets::JS(sprintf(
-            "function(gd){Plotly.downloadImage(gd,{format:'png',filename:'%s'});}",
+            "function(gd){Plotly.downloadImage(gd,{format:'png',filename:'%s',width:1300,height:500});}",
             paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"))
           ))
         ),
@@ -657,7 +657,7 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
             )
           ),
           click = htmlwidgets::JS(sprintf(
-            "function(gd){Plotly.downloadImage(gd,{format:'svg',filename:'%s'});}",
+            "function(gd){Plotly.downloadImage(gd,{format:'svg',filename:'%s',width:1300,height:500});}",
             paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"))
           ))
         )
@@ -685,7 +685,7 @@ mod_plot_ui <- function(id, lang = i18n_default_language) {
       column(
         width = 9,
         p(tr("plot.ui.right_intro")),
-        plotly::plotlyOutput(ns("comparison_plot"), height = "calc(95vh - 280px)")
+        plotly::plotlyOutput(ns("comparison_plot"), height = "380px")
       )
     )
   )
