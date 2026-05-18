@@ -552,7 +552,13 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       content = function(file) {
         result_df <- summary_table_for_download()
         validate(need(is.data.frame(result_df) && nrow(result_df) > 0, tr("stats.download.no_summary_data")))
-        utils::write.csv(result_df, file = file, row.names = FALSE, na = "")
+        # Write UTF-8 BOM for Excel compatibility
+        con_bin <- file(file, open = "wb")
+        writeBin(as.raw(c(0xEF, 0xBB, 0xBF)), con_bin)
+        close(con_bin)
+        con_txt <- file(file, open = "a", encoding = "UTF-8")
+        on.exit(close(con_txt), add = TRUE)
+        utils::write.csv(result_df, file = con_txt, row.names = FALSE, na = "")
       }
     )
 
@@ -576,7 +582,13 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       content = function(file) {
         result_df <- pairwise_table_for_download()
         validate(need(is.data.frame(result_df) && nrow(result_df) > 0, tr("stats.download.no_pairwise_data")))
-        utils::write.csv(result_df, file = file, row.names = FALSE, na = "")
+        # Write UTF-8 BOM for Excel compatibility
+        con_bin <- file(file, open = "wb")
+        writeBin(as.raw(c(0xEF, 0xBB, 0xBF)), con_bin)
+        close(con_bin)
+        con_txt <- file(file, open = "a", encoding = "UTF-8")
+        on.exit(close(con_txt), add = TRUE)
+        utils::write.csv(result_df, file = con_txt, row.names = FALSE, na = "")
       }
     )
 

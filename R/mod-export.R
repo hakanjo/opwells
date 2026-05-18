@@ -65,7 +65,14 @@ mod_export_server <- function(id, data, likert_state, active_tab = NULL, lang = 
       },
       content = function(file) {
         result_df <- result_table_for_download()
-        utils::write.csv(result_df, file = file, row.names = FALSE, na = "")
+        # Write UTF-8 BOM first, then append CSV through a UTF-8 text connection.
+        con_bin <- file(file, open = "wb")
+        writeBin(as.raw(c(0xEF, 0xBB, 0xBF)), con_bin)
+        close(con_bin)
+
+        con_txt <- file(file, open = "a", encoding = "UTF-8")
+        on.exit(close(con_txt), add = TRUE)
+        utils::write.csv(result_df, file = con_txt, row.names = FALSE, na = "")
       }
     )
 
