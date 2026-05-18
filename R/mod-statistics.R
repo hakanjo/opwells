@@ -17,8 +17,20 @@ mod_statistics_ui <- function(id, lang = i18n_default_language) {
       column(
         width = 8,
         h4(tr("stats.ui.summary_title")),
+        div(
+          style = "margin-bottom: 10px;",
+          downloadButton(ns("download_summary_csv"), tr("export.ui.download_csv")),
+          tags$span(style = "display: inline-block; width: 8px;"),
+          downloadButton(ns("download_summary_xlsx"), tr("export.ui.download_xlsx"))
+        ),
         uiOutput(ns("summary_statistics_ui")),
         h4(tr("stats.ui.pairwise_title")),
+        div(
+          style = "margin-bottom: 10px;",
+          downloadButton(ns("download_pairwise_csv"), tr("export.ui.download_csv")),
+          tags$span(style = "display: inline-block; width: 8px;"),
+          downloadButton(ns("download_pairwise_xlsx"), tr("export.ui.download_xlsx"))
+        ),
         uiOutput(ns("pairwise_statistics_ui"))
       )
     )
@@ -490,6 +502,96 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       out
     })
+
+    summary_table_for_download <- reactive({
+      if (!has_user_data()) {
+        return(reference_summary_statistics())
+      }
+
+      state <- current_likert_state()
+      if (is.null(state) || is.null(state$scaled_scores)) {
+        return(data.frame())
+      }
+
+      if (!length(selected_group_definitions())) {
+        return(reference_summary_statistics())
+      }
+
+      summary_statistics()
+    })
+
+    pairwise_table_for_download <- reactive({
+      if (!has_user_data()) {
+        return(data.frame())
+      }
+
+      state <- current_likert_state()
+      if (is.null(state) || is.null(state$scaled_scores)) {
+        return(data.frame())
+      }
+
+      if (!length(selected_group_definitions())) {
+        return(data.frame())
+      }
+
+      pairwise_statistics()
+    })
+
+    summary_filename_suffix <- reactive({
+      if (identical(resolved_lang(), "sv")) "statistik-kategorier" else "statistics-categories"
+    })
+
+    pairwise_filename_suffix <- reactive({
+      if (identical(resolved_lang(), "sv")) "parvisa-jamforelser-mellan-grupper" else "pairwise-comparisons-between-groups"
+    })
+
+    output$download_summary_csv <- downloadHandler(
+      filename = function() {
+        paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"), "-", summary_filename_suffix(), ".csv")
+      },
+      content = function(file) {
+        result_df <- summary_table_for_download()
+        validate(need(is.data.frame(result_df) && nrow(result_df) > 0, tr("stats.download.no_summary_data")))
+        utils::write.csv(result_df, file = file, row.names = FALSE, na = "")
+      }
+    )
+
+    output$download_summary_xlsx <- downloadHandler(
+      filename = function() {
+        paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"), "-", summary_filename_suffix(), ".xlsx")
+      },
+      content = function(file) {
+        result_df <- summary_table_for_download()
+        validate(need(is.data.frame(result_df) && nrow(result_df) > 0, tr("stats.download.no_summary_data")))
+        validate(need(requireNamespace("writexl", quietly = TRUE), tr("export.validation.writexl")))
+
+        writexl::write_xlsx(result_df, path = file)
+      }
+    )
+
+    output$download_pairwise_csv <- downloadHandler(
+      filename = function() {
+        paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"), "-", pairwise_filename_suffix(), ".csv")
+      },
+      content = function(file) {
+        result_df <- pairwise_table_for_download()
+        validate(need(is.data.frame(result_df) && nrow(result_df) > 0, tr("stats.download.no_pairwise_data")))
+        utils::write.csv(result_df, file = file, row.names = FALSE, na = "")
+      }
+    )
+
+    output$download_pairwise_xlsx <- downloadHandler(
+      filename = function() {
+        paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"), "-", pairwise_filename_suffix(), ".xlsx")
+      },
+      content = function(file) {
+        result_df <- pairwise_table_for_download()
+        validate(need(is.data.frame(result_df) && nrow(result_df) > 0, tr("stats.download.no_pairwise_data")))
+        validate(need(requireNamespace("writexl", quietly = TRUE), tr("export.validation.writexl")))
+
+        writexl::write_xlsx(result_df, path = file)
+      }
+    )
 
     output$summary_statistics_ui <- renderUI({
       if (!has_user_data()) {

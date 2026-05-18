@@ -129,7 +129,9 @@ i18n_locales <- list(
     "stats.ui.summary.no_groups" = "Välj minst en grupp för att visa statistik per kategori.",
     "stats.ui.pairwise.no_scores" = "Skalad poäng saknas. Beräkna poäng för att visa parvisa jämförelser.",
     "stats.ui.pairwise.no_groups" = "Välj minst två grupper för att visa parvisa jämförelser.",
-    "stats.ui.pairwise.need_two" = "Minst två grupper med data krävs för parvisa jämförelser."
+    "stats.ui.pairwise.need_two" = "Minst två grupper med data krävs för parvisa jämförelser.",
+    "stats.download.no_summary_data" = "Ingen deskriptiv statistik finns att exportera.",
+    "stats.download.no_pairwise_data" = "Inga parvisa jämförelser finns att exportera."
   ),
   en = list(
     "lang.swedish" = "Swedish",
@@ -258,7 +260,9 @@ i18n_locales <- list(
     "stats.ui.summary.no_groups" = "Select at least one group to show category statistics.",
     "stats.ui.pairwise.no_scores" = "Scaled scores are missing. Compute scores to show pairwise comparisons.",
     "stats.ui.pairwise.no_groups" = "Select at least two groups to show pairwise comparisons.",
-    "stats.ui.pairwise.need_two" = "At least two groups with data are required for pairwise comparisons."
+    "stats.ui.pairwise.need_two" = "At least two groups with data are required for pairwise comparisons.",
+    "stats.download.no_summary_data" = "No descriptive statistics are available for export.",
+    "stats.download.no_pairwise_data" = "No pairwise comparisons are available for export."
   )
 )
 

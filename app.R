@@ -78,7 +78,10 @@ server <- function(input, output, session) {
         tabPanel(
           tr("app.tab.data_input"),
           value = "data_input",
-          mod_data_input_ui("data_input", lang = lang)
+          tagList(
+            mod_data_input_ui("data_input", lang = lang),
+            uiOutput("data_input_export_ui")
+          )
         ),
         tabPanel(
           tr("app.tab.define_groups"),
@@ -94,12 +97,8 @@ server <- function(input, output, session) {
           tr("app.tab.statistics"),
           value = "statistics",
           mod_statistics_ui("statistics", lang = lang)
-        ),
-        tabPanel(
-          tr("app.tab.export"),
-          value = "export",
-          mod_export_ui("export", lang = lang)
         )
+        
       )
     )
   })
@@ -108,13 +107,27 @@ server <- function(input, output, session) {
   data_r <- data_input_r$data
   likert_state_r <- data_input_r$likert_state
 
+  output$data_input_export_ui <- renderUI({
+    state <- likert_state_r()
+    scaled <- if (!is.null(state)) state$scaled_scores else NULL
+
+    if (is.null(scaled)) {
+      return(NULL)
+    }
+
+    tagList(
+      tags$hr(),
+      mod_export_ui("export", lang = current_language())
+    )
+  })
+
   shared_group_state <- create_group_selection_state()
 
   mod_export_server(
     "export",
     data = data_r,
     likert_state = likert_state_r,
-    active_tab = reactive(input$main_tab),
+    active_tab = NULL,
     lang = current_language
   )
   mod_statistics_server(
