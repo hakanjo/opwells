@@ -621,7 +621,21 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
         )
       )
     ) |>
-    plotly::config(displayModeBar = TRUE, responsive = TRUE)
+    plotly::config(
+      displayModeBar = TRUE,
+      responsive = TRUE,
+      modeBarButtonsToRemove = list(
+        "lasso2d",      # Lasso Select
+        "select2d",     # Box Select
+        "zoom2d",       # Zoom
+        "autoScale2d",  # Autoscale
+        "toggleSpikeLines"  # Show closest / Compare data on hover toggle
+      ),
+      toImageButtonOptions = list(
+        format = "png",
+        filename = paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"))
+      )
+    )
 }
 
 mod_plot_ui <- function(id, lang = i18n_default_language) {
