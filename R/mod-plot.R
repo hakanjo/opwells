@@ -305,7 +305,7 @@ plot_build_user_data <- function(user_df, scores, group_definitions, lang = i18n
     )
     df <- df[!is.na(df$score_value), , drop = FALSE]
     if (!nrow(df)) return(NULL)
-    df$hover_text <- i18n_t(lang, "plot.hover.raw", df$group_label, df$row_id, df$score_value)
+    df$hover_text <- i18n_t(lang, "plot.hover.raw", df$group_label, df$row_id + 1, df$score_value)
     df
   })
   raw_list <- Filter(Negate(is.null), raw_list)
