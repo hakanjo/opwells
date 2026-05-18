@@ -629,6 +629,8 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
         "select2d",     # Box Select
         "zoom2d",       # Zoom
         "autoScale2d",  # Autoscale
+        "hoverClosestCartesian",  # Show closest on hover
+        "hoverCompareCartesian",  # Compare data on hover
         "toggleSpikeLines",  # Show closest / Compare data on hover toggle
         "toImage"            # Replaced by custom adjacent PNG/SVG export buttons
       ),

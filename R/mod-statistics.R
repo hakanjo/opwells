@@ -24,14 +24,7 @@ mod_statistics_ui <- function(id, lang = i18n_default_language) {
           downloadButton(ns("download_summary_xlsx"), tr("export.ui.download_xlsx"))
         ),
         uiOutput(ns("summary_statistics_ui")),
-        h4(tr("stats.ui.pairwise_title")),
-        div(
-          style = "margin-bottom: 10px;",
-          downloadButton(ns("download_pairwise_csv"), tr("export.ui.download_csv")),
-          tags$span(style = "display: inline-block; width: 8px;"),
-          downloadButton(ns("download_pairwise_xlsx"), tr("export.ui.download_xlsx"))
-        ),
-        uiOutput(ns("pairwise_statistics_ui"))
+        uiOutput(ns("pairwise_section_ui"))
       )
     )
   )
@@ -535,6 +528,24 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       pairwise_statistics()
+    })
+
+    output$pairwise_section_ui <- renderUI({
+      pairwise_df <- pairwise_table_for_download()
+      if (!is.data.frame(pairwise_df) || nrow(pairwise_df) == 0) {
+        return(NULL)
+      }
+
+      tagList(
+        h4(tr("stats.ui.pairwise_title")),
+        div(
+          style = "margin-bottom: 10px;",
+          downloadButton(session$ns("download_pairwise_csv"), tr("export.ui.download_csv")),
+          tags$span(style = "display: inline-block; width: 8px;"),
+          downloadButton(session$ns("download_pairwise_xlsx"), tr("export.ui.download_xlsx"))
+        ),
+        build_table(pairwise_df)
+      )
     })
 
     summary_filename_suffix <- reactive({
