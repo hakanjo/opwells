@@ -491,59 +491,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       out
     })
 
-    show_statistics_status_notification <- function() {
-      if (!identical(active_tab(), "statistics")) {
-        return()
-      }
-
-      notification_id <- session$ns("statistics_status_notification")
-      user_df <- if (is.null(data)) NULL else data()
-      state <- current_likert_state()
-
-      if (!is.data.frame(user_df) || nrow(user_df) == 0 || ncol(user_df) == 0) {
-        showNotification(
-          tr("stats.notif.showing_reference"),
-          type = "message",
-          duration = 3,
-          id = notification_id
-        )
-        return()
-      }
-
-      if (is.null(state) || is.null(state$scaled_scores)) {
-        showNotification(
-          tr("stats.notif.no_scores"),
-          type = "warning",
-          duration = 3,
-          id = notification_id
-        )
-        return()
-      }
-
-      showNotification(
-        tr("stats.notif.ready"),
-        type = "message",
-        duration = 3,
-        id = notification_id
-      )
-    }
-
-    observeEvent(active_tab(), {
-      if (!identical(active_tab(), "statistics")) {
-        return()
-      }
-
-      show_statistics_status_notification()
-    }, ignoreInit = TRUE)
-
-    observeEvent(list(data(), current_likert_state()), {
-      if (!identical(active_tab(), "statistics")) {
-        return()
-      }
-
-      show_statistics_status_notification()
-    }, ignoreInit = TRUE)
-
     output$summary_statistics_ui <- renderUI({
       if (!has_user_data()) {
         return(build_table(reference_summary_statistics()))

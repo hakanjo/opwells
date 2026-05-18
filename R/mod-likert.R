@@ -62,50 +62,7 @@ mod_likert_server <- function(id, data, active_tab = NULL, lang = NULL) {
       }
 
       scores(compute_scaled_score(current_data, selected_cols))
-
-      n_selected <- length(selected_cols)
-      warning_notification_id <- ns("score_status_warning")
-      if (n_selected != 10) {
-        showNotification(
-          tr("likert.notif.recommend_10", n_selected),
-          type = "warning",
-          duration = 5,
-          id = warning_notification_id
-        )
-      } else {
-        removeNotification(warning_notification_id)
-      }
     }
-
-    observeEvent(active_tab(), {
-      if (!identical(active_tab(), "likert")) {
-        return()
-      }
-
-      notification_id <- ns("likert_selection_prompt")
-
-      if (!has_likert_data()) {
-        showNotification(
-          tr("likert.notif.no_data_tab"),
-          type = "warning",
-          duration = 3,
-          id = notification_id
-        )
-        return()
-      }
-
-      if (is.null(scores())) {
-        showNotification(
-          tr("likert.notif.select_columns"),
-          type = "message",
-          duration = 3,
-          id = notification_id
-        )
-        return()
-      }
-
-      removeNotification(notification_id)
-    }, ignoreInit = TRUE)
 
     output$likert_preview_ui <- renderUI({
       current_data <- data()
@@ -246,33 +203,9 @@ mod_likert_server <- function(id, data, active_tab = NULL, lang = NULL) {
     observeEvent(input$compute_scores, {
       req(length(likert_cols_selected()) > 0)
       current_data <- data()
-      if (!has_likert_data()) {
-        showNotification(
-          tr("likert.notif.no_data_compute"),
-          type = "warning",
-          duration = 3,
-          id = ns("likert_no_data")
-        )
-        return()
-      }
+      req(has_likert_data())
       compute_scores_with_feedback(current_data, likert_cols_selected())
     })
-
-    observeEvent(list(scores(), length(likert_cols_selected())), {
-      notification_id <- ns("score_status_success")
-
-      if (is.null(scores()) || length(likert_cols_selected()) != 10) {
-        removeNotification(notification_id)
-        return()
-      }
-
-      showNotification(
-        tr("likert.notif.success"),
-        type = "message",
-        duration = 3,
-        id = notification_id
-      )
-    }, ignoreInit = TRUE)
 
     output$score_status <- renderUI({
       if (has_likert_data() && !length(likert_cols_selected())) {

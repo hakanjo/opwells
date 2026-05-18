@@ -504,6 +504,22 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
     hoverinfo = "none"
   )
 
+  if (has_raw) {
+    fig <- fig |>
+      plotly::add_markers(
+        data = raw_plot,
+        x = ~score_value,
+        y = ~y_value,
+        marker = list(color = "#61a43e", size = 8, symbol = "circle-open", opacity = 0.35),
+        text = ~hover_text,
+        hoverinfo = "text",
+        name = i18n_t(lang, "plot.legend.raw"),
+        legendgroup = "raw",
+        showlegend = TRUE,
+        inherit = FALSE
+      )
+  }
+
   if (has_user) {
     fig <- fig |>
       plotly::add_segments(
@@ -555,22 +571,6 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
         hoverinfo = "text",
         name = i18n_t(lang, "plot.legend.reference"),
         legendgroup = "reference",
-        showlegend = TRUE,
-        inherit = FALSE
-      )
-  }
-
-  if (has_raw) {
-    fig <- fig |>
-      plotly::add_markers(
-        data = raw_plot,
-        x = ~score_value,
-        y = ~y_value,
-        marker = list(color = "#3f78b0", size = 8, symbol = "circle-open"),
-        text = ~hover_text,
-        hoverinfo = "text",
-        name = i18n_t(lang, "plot.legend.raw"),
-        legendgroup = "raw",
         showlegend = TRUE,
         inherit = FALSE
       )
