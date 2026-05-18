@@ -629,11 +629,36 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
         "select2d",     # Box Select
         "zoom2d",       # Zoom
         "autoScale2d",  # Autoscale
-        "toggleSpikeLines"  # Show closest / Compare data on hover toggle
+        "toggleSpikeLines",  # Show closest / Compare data on hover toggle
+        "toImage"            # Replaced by custom adjacent PNG/SVG export buttons
       ),
-      toImageButtonOptions = list(
-        format = "png",
-        filename = paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"))
+      modeBarButtonsToAdd = list(
+        list(
+          name = "toImagePNG",
+          title = "Download plot as PNG",
+          icon = htmlwidgets::JS("Plotly.Icons.camera"),
+          click = htmlwidgets::JS(sprintf(
+            "function(gd){Plotly.downloadImage(gd,{format:'png',filename:'%s'});}",
+            paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"))
+          ))
+        ),
+        list(
+          name = "toImageSVG",
+          title = "Download plot as SVG",
+          icon = list(
+            width = 512,
+            height = 512,
+            path = paste0(
+              "M480 352h-96v-64c0-17.7-14.3-32-32-32h-64v-96h64c17.7 0 32-14.3 32-32V64h96c17.7 0 32 14.3 32 32v224c0 17.7-14.3 32-32 32z ",
+              "M288 352v96c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32V224c0-17.7 14.3-32 32-32h96v64c0 17.7 14.3 32 32 32h64v64h64z ",
+              "M224 224V0l96 96h-64v128h-32z"
+            )
+          ),
+          click = htmlwidgets::JS(sprintf(
+            "function(gd){Plotly.downloadImage(gd,{format:'svg',filename:'%s'});}",
+            paste0("OPWELLS-", format(Sys.Date(), "%Y-%m-%d"))
+          ))
+        )
       )
     )
 }
