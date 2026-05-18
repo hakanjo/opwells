@@ -127,11 +127,69 @@ plot_parse_group_definitions <- function(selections) {
   })
 }
 
-plot_build_selected_group_definitions <- function(selections, combined_groups = list(), include_total = FALSE, lang = i18n_default_language) {
-  defs <- plot_parse_group_definitions(selections)
+plot_combined_groups_column_key <- function() {
+  "__combined_groups__"
+}
+
+plot_with_combined_group_choices <- function(col_groups, combined_groups = list()) {
+  out <- if (is.list(col_groups)) col_groups else list()
+
+  labels <- vapply(combined_groups, function(g) {
+    if (!is.list(g) || is.null(g$label)) {
+      return("")
+    }
+
+    as.character(g$label)
+  }, character(1))
+
+  labels <- sort(unique(plot_trim_non_empty(labels)))
+  if (length(labels)) {
+    out[[plot_combined_groups_column_key()]] <- labels
+  }
+
+  out
+}
+
+plot_selected_combined_group_definitions <- function(selections, combined_groups = list()) {
+  selected_labels <- unique(plot_trim_non_empty(selections[[plot_combined_groups_column_key()]]))
+  if (!length(selected_labels) || !length(combined_groups)) {
+    return(list())
+  }
+
+  valid_combined <- Filter(function(g) {
+    is.list(g) && !is.null(g$label) && nzchar(trimws(as.character(g$label)))
+  }, combined_groups)
+
+  defs <- lapply(selected_labels, function(lbl) {
+    idx <- which(vapply(valid_combined, function(g) identical(g$label, lbl), logical(1)))
+    if (!length(idx)) {
+      return(NULL)
+    }
+
+    valid_combined[[idx[[1]]]]
+  })
+
+  Filter(Negate(is.null), defs)
+}
+
+plot_build_selected_group_definitions <- function(
+  selections,
+  combined_groups = list(),
+  include_total = FALSE,
+  lang = i18n_default_language,
+  include_all_combined = TRUE
+) {
+  base_selections <- selections
+  base_selections[[plot_combined_groups_column_key()]] <- NULL
+
+  defs <- plot_parse_group_definitions(base_selections)
 
   if (length(combined_groups)) {
-    defs <- c(defs, combined_groups)
+    if (isTRUE(include_all_combined)) {
+      defs <- c(defs, combined_groups)
+    } else {
+      defs <- c(defs, plot_selected_combined_group_definitions(selections, combined_groups))
+    }
   }
 
   if (isTRUE(include_total)) {
@@ -579,12 +637,6 @@ mod_plot_ui <- function(id, lang = i18n_default_language) {
         uiOutput(ns("group_selectors")),
         uiOutput(ns("reference_group_selector")),
         hr(),
-        p(strong(tr("plot.ui.combine.title")), style = "margin-top: 20px;"),
-        p(tr("plot.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
-        textInput(ns("combined_group_label"), label = tr("plot.ui.combine.label"), placeholder = tr("plot.ui.combine.placeholder")),
-        actionButton(ns("add_combined_group"), tr("plot.ui.combine.add"), class = "btn-primary"),
-        uiOutput(ns("combined_groups_list")),
-        hr(),
         uiOutput(ns("include_total_toggle")),
         uiOutput(ns("raw_points_toggle")),
         uiOutput(ns("plot_status"))
@@ -639,7 +691,21 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       if (is.list(v) && "selected_columns" %in% names(v)) v$selected_columns else if (is.character(v)) v else character(0)
     })
 
-    col_groups <- reactive(plot_column_groups(user_data(), current_item_cols()))
+    combined_groups_for_choices <- reactive({
+      if (!inherits(group_state, "reactivevalues")) {
+        return(list())
+      }
+
+      value <- group_state$combined_groups
+      if (is.list(value)) value else list()
+    })
+
+    col_groups <- reactive({
+      plot_with_combined_group_choices(
+        plot_column_groups(user_data(), current_item_cols()),
+        combined_groups_for_choices()
+      )
+    })
     ref_group_choices <- reactive(plot_reference_group_choices(ref_data()))
 
     group_controller <- group_selection_controller(
@@ -656,7 +722,6 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     use_shared_group_state <- isTRUE(group_controller$use_shared_group_state)
     selected_group_selections <- group_controller$selected_group_selections
     get_combined_groups <- group_controller$get_combined_groups
-    set_combined_groups <- group_controller$set_combined_groups
     current_include_total <- group_controller$current_include_total
     current_reference_groups <- group_controller$current_reference_groups
 
@@ -692,9 +757,15 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         return(p(tr("plot.ui.load_data_for_groups"), style = "color: #6b6b6b;"))
       }
       lapply(names(groups), function(col) {
+        label <- if (identical(col, plot_combined_groups_column_key())) {
+          tr("group.ui.defined_groups")
+        } else {
+          col
+        }
+
         selectizeInput(
           ns(paste0("grp_", col)),
-          label = col,
+          label = label,
           choices = groups[[col]],
           selected = NULL,
           multiple = TRUE,
@@ -728,107 +799,9 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         selections = selected_group_selections(),
         combined_groups = get_combined_groups(),
         include_total = current_include_total(),
-        lang = resolved_lang()
+        lang = resolved_lang(),
+        include_all_combined = FALSE
       )
-    })
-
-    observeEvent(input$add_combined_group, {
-      label <- trimws(input$combined_group_label)
-      if (!nzchar(label)) {
-        showNotification(tr("plot.notif.enter_name"), type = "warning")
-        return()
-      }
-
-      current_selections <- selected_group_selections()
-
-      if (!length(current_selections)) {
-        showNotification(tr("plot.notif.select_at_least_one"), type = "warning")
-        return()
-      }
-
-      source_defs <- plot_parse_group_definitions(current_selections)
-
-      if (!length(source_defs)) {
-        showNotification(tr("plot.notif.create_failed"), type = "error")
-        return()
-      }
-
-      combined_group <- plot_create_combined_group(source_defs, label)
-
-      current_combined <- get_combined_groups()
-      set_combined_groups(c(current_combined, list(combined_group)))
-
-      updateTextInput(session, "combined_group_label", value = "")
-
-      showNotification(tr("plot.notif.created", label), type = "message")
-    })
-
-    created_observers <- reactiveVal(character(0))
-
-    output$combined_groups_list <- renderUI({
-      combined <- get_combined_groups()
-      if (!length(combined)) {
-        return(NULL)
-      }
-
-      ns <- session$ns
-      tagList(
-        p(strong(tr("plot.ui.combined_count", length(combined))), style = "margin-top: 15px; margin-bottom: 5px;"),
-        lapply(seq_along(combined), function(i) {
-          group <- combined[[i]]
-          label <- group$label
-          safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
-          tags$div(
-            style = "background-color: #f5f5f5; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;",
-            tags$span(label),
-            actionButton(
-              ns(paste0("remove_combined_group_", safe_id)),
-              tr("plot.ui.remove"),
-              class = "btn-sm btn-default",
-              style = "margin: 0;"
-            )
-          )
-        })
-      )
-    })
-
-    observe({
-      combined <- get_combined_groups()
-      if (!length(combined)) {
-        return()
-      }
-
-      current_buttons <- vapply(combined, function(g) {
-        paste0("remove_combined_group_", gsub("[^a-zA-Z0-9_]", "_", g$label))
-      }, character(1))
-
-      existing <- created_observers()
-
-      for (i in seq_along(combined)) {
-        label <- combined[[i]]$label
-        safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
-        button_id <- paste0("remove_combined_group_", safe_id)
-
-        if (!(button_id %in% existing)) {
-          local({
-            btn_id <- button_id
-            group_label <- label
-
-            observeEvent(input[[btn_id]], {
-              current_combined <- get_combined_groups()
-              idx <- which(vapply(current_combined, function(g) g$label == group_label, logical(1)))
-
-              if (length(idx) > 0) {
-                removed_label <- current_combined[[idx[1]]]$label
-                set_combined_groups(current_combined[-idx[1]])
-                showNotification(tr("plot.notif.removed", removed_label), type = "message")
-              }
-            }, ignoreInit = TRUE)
-          })
-
-          created_observers(c(created_observers(), button_id))
-        }
-      }
     })
 
     output$include_total_toggle <- renderUI({
@@ -908,7 +881,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     list(
-      column_groups = reactive(plot_column_groups(user_data(), current_item_cols())),
+      column_groups = col_groups,
       plot_payload = plot_payload
     )
   })

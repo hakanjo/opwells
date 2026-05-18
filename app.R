@@ -81,6 +81,11 @@ server <- function(input, output, session) {
           mod_data_input_ui("data_input", lang = lang)
         ),
         tabPanel(
+          tr("app.tab.define_groups"),
+          value = "define_groups",
+          mod_define_groups_ui("define_groups", lang = lang)
+        ),
+        tabPanel(
           tr("app.tab.plot"),
           value = "plot",
           mod_plot_ui("plot", lang = lang)
@@ -118,6 +123,14 @@ server <- function(input, output, session) {
     likert_state = likert_state_r,
     active_tab = reactive(input$main_tab),
     group_state = shared_group_state,
+    lang = current_language
+  )
+  mod_define_groups_server(
+    "define_groups",
+    data = data_r,
+    likert_state = likert_state_r,
+    group_state = shared_group_state,
+    active_tab = reactive(input$main_tab),
     lang = current_language
   )
   mod_plot_server(

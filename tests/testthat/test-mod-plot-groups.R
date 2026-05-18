@@ -46,6 +46,38 @@ test_that("plot_parse_group_definitions converts selections to labelled defs", {
   expect_equal(defs2[[2]]$label, "col2: X")
 })
 
+test_that("plot_build_selected_group_definitions includes combined groups only when selected", {
+  mod_env <- make_mod_plot_env()
+
+  combined <- list(
+    mod_env$plot_create_combined_group(
+      source_defs = mod_env$plot_parse_group_definitions(list(grp = "A")),
+      label = "A eller B"
+    )
+  )
+
+  defs_not_selected <- mod_env$plot_build_selected_group_definitions(
+    selections = list(grp = "A"),
+    combined_groups = combined,
+    include_total = FALSE,
+    include_all_combined = FALSE
+  )
+  labels_not_selected <- vapply(defs_not_selected, function(d) d$label, character(1))
+  expect_false("A eller B" %in% labels_not_selected)
+
+  defs_selected <- mod_env$plot_build_selected_group_definitions(
+    selections = list(
+      grp = "A",
+      `__combined_groups__` = "A eller B"
+    ),
+    combined_groups = combined,
+    include_total = FALSE,
+    include_all_combined = FALSE
+  )
+  labels_selected <- vapply(defs_selected, function(d) d$label, character(1))
+  expect_true("A eller B" %in% labels_selected)
+})
+
 test_that("plot_layers_from_selection toggles between reference and user layers", {
   mod_env <- make_mod_plot_env()
 
