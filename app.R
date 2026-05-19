@@ -55,7 +55,7 @@ server <- function(input, output, session) {
           mod_data_input_ui(
             "data_input",
             lang = lang,
-            left_extra_ui = uiOutput("data_input_export_ui")
+            right_extra_ui = uiOutput("data_input_export_ui")
           )
         ),
         tabPanel(
@@ -91,7 +91,6 @@ server <- function(input, output, session) {
     }
 
     tagList(
-      tags$hr(),
       mod_export_ui("export", lang = current_language())
     )
   })

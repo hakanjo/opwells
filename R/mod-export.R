@@ -3,11 +3,10 @@ mod_export_ui <- function(id, lang = i18n_default_language) {
   tr <- function(key, ...) i18n_t(lang, key, ...)
 
   tagList(
-    h5(tr("export.ui.title")),
-    helpText(tr("export.ui.help")),
-    downloadButton(ns("download_scores"), tr("export.ui.download_csv")),
-    downloadButton(ns("download_scores_xlsx"), tr("export.ui.download_xlsx")),
-    uiOutput(ns("export_status"))
+    h4(tr("export.title")),
+    helpText(tr("export.help")),
+    downloadButton(ns("download_scores"), tr("export.download_csv")),
+    downloadButton(ns("download_scores_xlsx"), tr("export.download_xlsx"))
   )
 }
 
@@ -82,9 +81,6 @@ mod_export_server <- function(id, data, likert_state, lang = NULL) {
       },
       content = function(file) {
         result_df <- result_table_for_download()
-        validate(
-          need(requireNamespace("writexl", quietly = TRUE), tr("export.validation.writexl"))
-        )
 
         writexl::write_xlsx(result_df, path = file)
       }
@@ -100,10 +96,33 @@ mod_export_server <- function(id, data, likert_state, lang = NULL) {
       }
 
       if (is.null(current_scaled_scores())) {
-        return(div(class = "alert alert-info", tr("export.status.pending")))
+        return(NULL)
       }
 
-      div(class = "alert alert-success", tr("export.status.ready"))
+      NULL
+    })
+
+    last_export_notification_state <- reactiveVal(NULL)
+
+    observe({
+      if (!has_export_data()) {
+        last_export_notification_state(NULL)
+        return()
+      }
+
+      if (!length(current_selected_columns())) {
+        last_export_notification_state(NULL)
+        return()
+      }
+
+      current_state <- !is.null(current_scaled_scores())
+      last_state <- last_export_notification_state()
+
+      if (current_state && !isTRUE(last_state)) {
+        showNotification(tr("export.status.ready"), type = "message", duration = 3)
+      }
+
+      last_export_notification_state(current_state)
     })
   })
 }

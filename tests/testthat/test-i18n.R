@@ -12,9 +12,11 @@ extract_i18n_keys <- function(file_path) {
   }
 
   keys_from_tr <- extract_with_pattern('tr\\(\\s*"([^"]+)"')
+  keys_from_tr_md <- extract_with_pattern('tr_md\\(\\s*"([^"]+)"')
   keys_from_i18n_t <- extract_with_pattern('i18n_t\\([^\\)]*"([^"]+)"')
+  keys_from_i18n_t_md <- extract_with_pattern('i18n_t_markdown\\([^\\)]*"([^"]+)"')
 
-  unique(c(keys_from_tr, keys_from_i18n_t))
+  unique(c(keys_from_tr, keys_from_tr_md, keys_from_i18n_t, keys_from_i18n_t_md))
 }
 
 test_that("i18n locales keep same keys across languages", {
@@ -65,4 +67,14 @@ test_that("all referenced i18n keys exist in both locales", {
     length(missing_in_en) == 0,
     paste("Referenced keys missing in English locale:", paste(missing_in_en, collapse = ", "))
   )
+})
+
+test_that("markdown translations render expected HTML structure", {
+  sv_html <- as.character(app_env$i18n_t_markdown("sv", "app.intro.markdown"))
+  en_html <- as.character(app_env$i18n_t_markdown("en", "app.intro.markdown"))
+
+  expect_match(sv_html, "<ul>")
+  expect_match(sv_html, "mailto:jeanette\\.melin@lnu\\.se")
+  expect_match(en_html, "<ul>")
+  expect_match(en_html, "Q&amp;A|Q&A")
 })

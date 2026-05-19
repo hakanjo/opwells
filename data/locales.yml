@@ -1,0 +1,251 @@
+sv:
+  app.title: Äldres välbefinnande - OPWELLS
+  app.tab.about: Om OPWELLS
+  app.tab.data_input: Ladda upp data
+  app.tab.define_groups: Definiera grupper
+  app.tab.plot: Illustrationer
+  app.tab.statistics: Statistiska jämförelser
+  about.description: |-
+    - OPWELLS är en enkät baserad på 10 frågor för att mäta äldres välbefinnande. OPWELLS är en förkortning för enkätens engelska benämning, *Older Persons Wellbeing Scale*.
+    - I denna webbapplikation kan du ta fram mått på välbefinnande utifrån individers enkätsvar.
+    - Du kan även illustrera skillnader mellan grupper och göra statistiska jämförelser inom dina data samt jämföra deras svar mot en referenspopulation*.
+    - Under "Ladda upp data" kan du ladda upp dina enkätsvar tillsammans med ytterligare variabler som du vill kunna göra jämförelser för. Använd gärna mallen som finns där för att se hur dina data ska vara strukturerade.
+    - OPWELLS är framtagna inom ramen för projektet "Mätning av äldres välbefinnande" och har finansierats av [Familjen Kamprads Stiftelse](https://familjenkampradsstiftelse.se). Om du har frågor om OPWELLS kan du [läsa mer här](#) eller kontakta [jeanette.melin@lnu.se](mailto:jeanette.melin@lnu.se).
+
+    \**Referensgruppen består av de (anonyma) personerna som deltog i utvecklingen av OPWELLS. De kommer från nio svenska projektparts- och samverkanskommuner.*
+  
+  data_input.help: |-
+    Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).
+    
+    Din fil för uppladdning måste innehålla en kolumn för varje OPWELLS-fråga.
+    
+    Namnen på kolumnerna måste följa formatet OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2 etc.
+
+    Utöver svaren kan du inkludera ytterligare kolumner där varje kolumn representerar en variabel.
+    
+    *Tänk på att inte ladda upp personuppgifter.*
+  data_input.help.template_prefix: 'Använd gärna denna mall för uppladdning av data:'
+  data_input.help.template_link: mall (.xlsx)
+  data_input.upload.label: 'Ladda upp data'
+  data_input.delimiter.label: Avgränsare
+  data_input.delimiter.auto: Automatisk
+  data_input.delimiter.comma: Komma (.csv)
+  data_input.delimiter.tab: Tab (.tsv)
+  data_input.delimiter.semicolon: Semikolon
+  data_input.validation.file_type: Vänligen ladda upp xlsx-, csv-, eller tsv-/txt-filer.
+  data_input.validation.parse_fail: Kunde inte analysera den uppladdade filen.
+  data_input.status.no_cols: Hittade inga OPWELLS/F/Q-kolumner i den uppladdade filen. Mätvärden kunde inte beräknas.
+  data_input.status.score_exact: 'OPWELLS-mått beräknat från %d kolumner: %s.'
+  data_input.status.score_nonexact: 'OPWELLS-mått beräknat från %d kolumner (exakt 10 rekommenderas): %s.'
+  export.title: Exportera OPWELLS-mått
+  export.help: Ladda ner dina data med en ny kolumn ('OPWELLS-mått') beräknad från dina data.
+  export.download_csv: Ladda ner (.csv)
+  export.download_xlsx: Ladda ner (.xlsx)
+  export.column.scaled_score: OPWELLS-mått
+  export.status.no_data: Ladda upp data för att aktivera export.
+  export.status.no_cols: Hittade inga OPWELLS/F/Q-kolumner i den uppladdade filen. Filerna innehåller originaldata utan OPWELLS-mått.
+  export.status.ready: Exporten inkluderar OPWELLS-mått.
+  
+  define_groups.title: Definiera grupper
+  define_groups.help: |-
+    Definiera nya grupper utifrån kombinationer av variabler i dina data. Grupperna kan sen användas för illustrationer och statistiska jämförelser.
+    
+    Välj en eller flera grupper i en eller flera kolumner, ange ett namn och skapa en kombinerad grupp.
+  define_groups.load_data_for_groups: Ladda data för att välja grupper.
+  define_groups.combine.label: Namn på grupp
+  define_groups.combine.placeholder: T.ex. "Kvinnor 2024"
+  define_groups.combine.add: Lägg till grupp
+  define_groups.notif.enter_name: Ange ett namn för gruppen
+  define_groups.notif.select_at_least_one: Välj minst en grupp att kombinera
+  define_groups.notif.create_failed: Kunde inte skapa den nya gruppen
+  define_groups.notif.created: Grupp '%s' skapad.
+  define_groups.remove: Ta bort
+  define_groups.notif.removed: Grupp '%s' borttagen.
+
+  plot.help: |-
+    Illustrera skillnader i välbefinnande mellan grupper.
+    
+    Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata. Håll muspekaren över punkterna för detaljer.
+
+    Markören visar gruppens medelvärde, linjen visar spannet som täcker ⅔ av svaren.
+
+    Du kan spara en illustration med ikonerna uppe till höger i diagrammet.
+  plot.load_data_for_groups: Ladda data för att välja grupper.
+  plot.hover.no_valid: <b>%s</b><br>Inga giltiga OPWELLS-mått
+  plot.hover.summary: '<b>%s</b><br>Medel: %.1f<br>⅔: %.1f-%.1f<br>Antal
+    svar: %d'
+  plot.hover.raw: '<b>%s</b><br>Rad: %d<br>OPWELLS: %.1f'
+  plot.hover.reference: '<b>%s</b><br>Medel: %.1f<br>⅔: %.1f-%.1f'
+  plot.status.no_user_data: Ingen användardata laddad. Ladda data i fliken "Ladda upp data" för att visa användardata.
+  plot.status.no_scores: Inga OPWELLS beräknad för användardata.
+  plot.status.missing_reference: 'Referensdata saknas för: %s'
+  plot.empty.no_data: Ingen data att visa för det aktuella urvalet.
+  plot.legend.user: Användardata
+  plot.legend.reference: Referensdata
+  plot.legend.raw: Individuella datapunkter
+  plot.axis.low: Lägst välbefinnande
+  plot.axis.high: Högst välbefinnande
+  plot.reference_groups: Välj referensgrupper
+  plot.defined_groups: Definierade grupper
+  plot.combined_count: Kombinerade grupper (%d)
+  plot.include_total: Visa total
+  plot.total_label: Total
+  plot.show_raw: Visa individuella datapunkter
+  stats.title: Statistiska jämförelser för användardata
+  stats.help: |-
+    Sammanfatta skillnader i välbefinnande mellan grupper.
+    
+    Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata.
+
+    För varje kategori visas medel, median, standardavvikelse (SD) och intervallet som täcker ⅔ av svaren.
+  stats.summary_title: Statistik per kategori
+  stats.pairwise_title: Parvisa jämförelser mellan grupper
+  stats.load_data_for_groups: Ladda data för att välja grupper.
+  stats.reference_groups: Välj referensgrupper
+  stats.table.no_data: Ingen statistik tillgänglig.
+  stats.summary.col.category: Kategori
+  stats.summary.col.n: Antal
+  stats.summary.col.mean: Medel
+  stats.summary.col.median: Median
+  stats.summary.col.sd: SD
+  stats.summary.col.range_low: 2/3 nedre
+  stats.summary.col.range_high: 2/3 övre
+  stats.pairwise.col.group1: Grupp 1
+  stats.pairwise.col.group2: Grupp 2
+  stats.pairwise.col.n1: N1
+  stats.pairwise.col.n2: N2
+  stats.pairwise.col.mean_diff: Medelskillnad
+  stats.pairwise.col.median_diff: Medianskillnad
+  stats.pairwise.col.p_value: p-värde (t-test)
+  stats.notif.no_data: Ingen användardata laddad. Ladda data i fliken "Ladda upp data" för att visa jämförelser.
+  stats.summary.no_scores: OPWELLS saknas.
+  stats.download.no_summary_data: Ingen deskriptiv statistik att exportera.
+  stats.download.no_pairwise_data: Inga parvisa jämförelser att exportera.
+
+en:
+  app.title: Older Persons' Wellbeing - OPWELLS
+  app.tab.about: About OPWELLS
+  app.tab.data_input: Upload data
+  app.tab.define_groups: Define groups
+  app.tab.plot: Illustrations
+  app.tab.statistics: Statistical comparisons
+
+  about.description: |-
+    - OPWELLS is a questionnaire based on 10 questions for measuring older persons' wellbeing. OPWELLS is an abbreviation of the questionnaire's English name, *Older Persons Wellbeing Scale*.
+    - In this web application, you can calculate measures of wellbeing based on individuals' questionnaire responses.
+    - You can also illustrate differences between groups and make statistical comparisons within your data, as well as compare their responses against a reference population*.
+    - Under "Upload data", you can upload your questionnaire responses together with additional variables that you want to use for comparisons. Feel free to use the template provided there to see how your data should be structured.
+    - OPWELLS was developed within the project "Measurement of older persons' wellbeing" and was funded by the [Familjen Kamprads Stiftelse](https://familjenkampradsstiftelse.se). If you have questions about OPWELLS, you can [read more here](#) or contact [jeanette.melin@lnu.se](mailto:jeanette.melin@lnu.se).
+
+    \**The reference group consists of the anonymous individuals who participated in the development of OPWELLS. They come from nine Swedish project partner and collaboration municipalities.*
+
+  data_input.help: |-
+    Upload a data file (.xlsx, .csv, .tsv, or .txt).
+    
+    Your upload file must contain one column for each OPWELLS question.
+    
+    The column names must follow the format OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2, etc.
+
+    In addition to the responses, you can include additional columns where each column represents a variable.
+    
+    *Remember not to upload personal data.*
+
+  data_input.help.template_prefix: 'Feel free to use this template for uploading data:'
+  data_input.help.template_link: template (.xlsx)
+  data_input.upload.label: 'Upload data'
+  data_input.delimiter.label: Delimiter
+  data_input.delimiter.auto: Automatic
+  data_input.delimiter.comma: Comma (.csv)
+  data_input.delimiter.tab: Tab (.tsv)
+  data_input.delimiter.semicolon: Semicolon
+  data_input.validation.file_type: Please upload xlsx, csv, or tsv/txt files.
+  data_input.validation.parse_fail: Could not parse the uploaded file.
+  data_input.status.no_cols: No OPWELLS/F/Q columns were found in the uploaded file. Measures could not be calculated.
+  data_input.status.score_exact: 'OPWELLS measure calculated from %d columns: %s.'
+  data_input.status.score_nonexact: 'OPWELLS measure calculated from %d columns (exactly 10 recommended): %s.'
+
+  export.title: Export OPWELLS measure
+  export.help: Download your data with a new column ('OPWELLS measure') calculated from your data.
+  export.download_csv: Download results table (.csv)
+  export.download_xlsx: Download results table (.xlsx)
+  export.column.scaled_score: OPWELLS measure
+  export.status.no_data: Upload data to enable export.
+  export.status.no_cols: No OPWELLS/F/Q columns were found in the uploaded file. The files contain the original data without an OPWELLS measure.
+  export.status.ready: The export includes the OPWELLS measure.
+
+  define_groups.title: Define groups
+  define_groups.help: |-
+    Define new groups based on combinations of variables in your data. The groups can then be used for illustrations and statistical comparisons.
+    
+    Select one or more groups in one or more columns, enter a name, and create a combined group.
+  define_groups.combine.label: Group name
+  define_groups.combine.placeholder: E.g. "Women 2024"
+  define_groups.combine.add: Add group
+  define_groups.notif.enter_name: Enter a name for the group
+  define_groups.notif.select_at_least_one: Select at least one group to combine
+  define_groups.notif.create_failed: Could not create the new group
+  define_groups.notif.created: Group '%s' created.
+  define_groups.remove: Remove
+  define_groups.notif.removed: Group '%s' removed.
+
+  plot.help: |-
+    Illustrate differences in wellbeing between groups.
+    
+    Select one or more groups in one or more columns. When no groups are selected, reference data are shown. Hover over the points for details.
+
+    The marker shows the group mean, and the line shows the range that covers ⅔ of the responses.
+
+    You can save an illustration with the icons at the top right of the plot.
+  plot.load_data_for_groups: Upload data to select groups.
+  plot.hover.no_valid: <b>%s</b><br>No valid OPWELLS measures
+  plot.hover.summary: '<b>%s</b><br>Mean: %.1f<br>⅔: %.1f-%.1f<br>Number
+    of responses: %d'
+  plot.hover.raw: '<b>%s</b><br>Row: %d<br>OPWELLS: %.1f'
+  plot.hover.reference: '<b>%s</b><br>Mean: %.1f<br>⅔: %.1f-%.1f'
+  plot.status.no_user_data: No user data uploaded. Upload data in the "Upload data" tab to display user data.
+  plot.status.no_scores: No OPWELLS measures calculated for user data.
+  plot.status.missing_reference: 'Reference data missing for: %s'
+  plot.empty.no_data: No data to display for the current selection.
+  plot.legend.user: User data
+  plot.legend.reference: Reference data
+  plot.legend.raw: Individual data points
+  plot.axis.low: Lowest wellbeing
+  plot.axis.high: Highest wellbeing
+  plot.reference_groups: Select reference groups
+  plot.defined_groups: Defined groups
+  plot.combined_count: Combined groups (%d)
+  plot.include_total: Show total
+  plot.total_label: Total
+  plot.show_raw: Show individual data points
+
+  stats.title: Statistical comparisons for user data
+  stats.help: |-
+    Summarize differences in wellbeing between groups.
+    
+    Select one or more groups in one or more columns. When no groups are selected, reference data are shown.
+
+    For each category, the mean, median, standard deviation (SD), and the range that covers ⅔ of the responses are shown.
+
+  stats.summary_title: Statistics by category
+  stats.pairwise_title: Pairwise comparisons between groups
+  stats.load_data_for_groups: Upload data to select groups.
+  stats.reference_groups: Select reference groups
+  stats.table.no_data: No statistics available.
+  stats.summary.col.category: Category
+  stats.summary.col.n: Count
+  stats.summary.col.mean: Mean
+  stats.summary.col.median: Median
+  stats.summary.col.sd: SD
+  stats.summary.col.range_low: 2/3 lower
+  stats.summary.col.range_high: 2/3 upper
+  stats.pairwise.col.group1: Group 1
+  stats.pairwise.col.group2: Group 2
+  stats.pairwise.col.n1: N1
+  stats.pairwise.col.n2: N2
+  stats.pairwise.col.mean_diff: Mean difference
+  stats.pairwise.col.median_diff: Median difference
+  stats.pairwise.col.p_value: p-value (t-test)
+  stats.notif.no_data: No user data uploaded. Upload data in the "Upload data" tab to display comparisons.
+  stats.summary.no_scores: OPWELLS is missing.
+  stats.download.no_summary_data: No descriptive statistics to export.
+  stats.download.no_pairwise_data: No pairwise comparisons to export.

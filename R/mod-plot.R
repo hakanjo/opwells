@@ -678,17 +678,16 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
 mod_plot_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
-
+  tr_md <- function(key, ...) i18n_t_markdown(lang, key, ...)
+  
   tagList(
-    br(),
     fluidRow(
       column(
         width = 3,
-        p(tr("plot.ui.left_intro")),
-        p(tr("plot.ui.right_intro")),
+        helpText(tr_md("plot.help")),
+        hr(),
         uiOutput(ns("group_selectors")),
         uiOutput(ns("reference_group_selector")),
-        hr(),
         uiOutput(ns("include_total_toggle")),
         uiOutput(ns("raw_points_toggle")),
         uiOutput(ns("plot_status"))
@@ -805,11 +804,11 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       groups <- col_groups()
       ns <- session$ns
       if (!length(groups)) {
-        return(p(tr("plot.ui.load_data_for_groups"), style = "color: #6b6b6b;"))
+        return(p(tr("plot.load_data_for_groups"), style = "color: #6b6b6b;"))
       }
       lapply(names(groups), function(col) {
         label <- if (identical(col, plot_combined_groups_column_key())) {
-          tr("group.ui.defined_groups")
+          tr("plot.defined_groups")
         } else {
           col
         }
@@ -837,7 +836,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
 
       selectizeInput(
         session$ns("reference_groups"),
-        label = tr("plot.ui.reference_groups"),
+        label = tr("plot.reference_groups"),
         choices = choices,
         selected = current_reference_groups(),
         multiple = TRUE,
@@ -864,7 +863,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
 
       checkboxInput(
         session$ns("include_total"),
-        label = tr("plot.ui.include_total"),
+        label = tr("plot.include_total"),
         value = isTRUE(current_value)
       )
     })
@@ -878,7 +877,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
 
       checkboxInput(
         session$ns("show_raw_points"),
-        label = tr("plot.ui.show_raw"),
+        label = tr("plot.show_raw"),
         value = isTRUE(current_value)
       )
     })

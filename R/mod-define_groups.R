@@ -1,23 +1,18 @@
 mod_define_groups_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
-
+  tr_md <- function(key, ...) i18n_t_markdown(lang, key, ...)
+  
   fluidRow(
     column(
       width = 3,
-      h5(tr("define_groups.ui.title")),
-      helpText(tr("define_groups.ui.help")),
-      p(tr("define_groups.ui.left_intro")),
-      uiOutput(ns("group_selectors")),
+      helpText(tr_md("define_groups.help")),
       hr(),
-      p(strong(tr("plot.ui.combine.title")), style = "margin-top: 20px;"),
-      p(tr("plot.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
-      textInput(ns("combined_group_label"), label = tr("plot.ui.combine.label"), placeholder = tr("plot.ui.combine.placeholder")),
-      actionButton(ns("add_combined_group"), tr("plot.ui.combine.add"), class = "btn-primary")
+      uiOutput(ns("group_selectors")),
+      uiOutput(ns("combined_group_controls"))
     ),
     column(
       width = 9,
-      h4(tr("define_groups.ui.current_title")),
       uiOutput(ns("combined_groups_list"))
     )
   )
@@ -109,7 +104,7 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
     output$group_selectors <- renderUI({
       col_groups <- column_groups()
       if (!length(col_groups)) {
-        return(p(tr("define_groups.ui.load_data_for_groups"), style = "color: #6b6b6b;"))
+        return(p(tr("define_groups.load_data_for_groups"), style = "color: #6b6b6b;"))
       }
 
       lapply(names(col_groups), function(col_nm) {
@@ -124,22 +119,45 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
       })
     })
 
+    output$combined_group_controls <- renderUI({
+      if (is.null(user_data())) {
+        return(NULL)
+      }
+
+      tagList(
+        textInput(
+          session$ns("combined_group_label"),
+          label = tr("define_groups.combine.label"),
+          placeholder = tr("define_groups.combine.placeholder")
+        ),
+        actionButton(
+          session$ns("add_combined_group"),
+          tr("define_groups.combine.add"),
+          class = "btn-primary"
+        )
+      )
+    })
+
     observeEvent(input$add_combined_group, {
+      if (is.null(user_data())) {
+        return()
+      }
+
       label <- trimws(input$combined_group_label)
       if (!nzchar(label)) {
-        showNotification(tr("plot.notif.enter_name"), type = "warning")
+        showNotification(tr("define_groups.notif.enter_name"), type = "warning")
         return()
       }
 
       current_selections <- selected_group_selections()
       if (!length(current_selections)) {
-        showNotification(tr("plot.notif.select_at_least_one"), type = "warning")
+        showNotification(tr("define_groups.notif.select_at_least_one"), type = "warning")
         return()
       }
 
       source_defs <- plot_parse_group_definitions(current_selections)
       if (!length(source_defs)) {
-        showNotification(tr("plot.notif.create_failed"), type = "error")
+        showNotification(tr("define_groups.notif.create_failed"), type = "error")
         return()
       }
 
@@ -148,7 +166,7 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
       set_combined_groups(c(current_combined, list(combined_group)))
 
       updateTextInput(session, "combined_group_label", value = "")
-      showNotification(tr("plot.notif.created", label), type = "message")
+      showNotification(tr("define_groups.notif.created", label), type = "message")
     })
 
     created_observers <- reactiveVal(character(0))
@@ -156,12 +174,12 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
     output$combined_groups_list <- renderUI({
       combined <- get_combined_groups()
       if (!length(combined)) {
-        return(p(tr("define_groups.ui.no_combined"), style = "color: #6b6b6b;"))
+        return(NULL)
       }
 
       ns <- session$ns
       tagList(
-        p(strong(tr("plot.ui.combined_count", length(combined))), style = "margin-top: 10px; margin-bottom: 5px;"),
+        h4(tr("define_groups.title")),
         lapply(seq_along(combined), function(i) {
           group <- combined[[i]]
           label <- group$label
@@ -172,7 +190,7 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
             tags$span(label),
             actionButton(
               ns(paste0("remove_combined_group_", safe_id)),
-              tr("plot.ui.remove"),
+              tr("define_groups.remove"),
               class = "btn-sm btn-default",
               style = "margin: 0;"
             )
@@ -206,7 +224,7 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
               if (length(idx) > 0) {
                 removed_label <- current_combined[[idx[1]]]$label
                 set_combined_groups(current_combined[-idx[1]])
-                showNotification(tr("plot.notif.removed", removed_label), type = "message")
+                showNotification(tr("define_groups.notif.removed", removed_label), type = "message")
               }
             }, ignoreInit = TRUE)
           })

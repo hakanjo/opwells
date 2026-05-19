@@ -1,266 +1,62 @@
 i18n_default_language <- "sv"
 i18n_supported_languages <- c("sv", "en")
 
-i18n_locales <- list(
-  sv = list(
-    "lang.swedish" = "Svenska",
-    "lang.english" = "Engelska",
-    "app.title" = "Äldres välbefinnande - OPWELLS",
-    "app.intro.li1" = "OPWELLS är en enkät baserad på 10 frågor för att mäta äldres välbefinnande. OPWELLS är en förkortning för enkätens engelska benämning, Older Persons Wellbeing Scale.",
-    "app.intro.li2" = "Denna webbapplikation möjliggör att ta fram mått på välbefinnande från individers enkätsvar.",
-    "app.intro.li3" = "Webbapplikationen möjliggör också illustrationer och statistiska jämförelser inom ditt dataset samt mot referenspopulationen*",
-    "app.intro.li4" = "Nedan kan du ladda upp dina enkätsvar tillsammans med ytterligare variabler som du vill kunna göra jämförelser för.",
-    "app.intro.project_prefix" = "OPWELLS och webbapplikationen är framtagna inom ramen för projektet Mätning av äldres välbefinnande och har finansierats av Familjen Kamprads Stiftelse. Om du har frågor om OPWELLS kan du antingen läsa mer här ",
-    "app.intro.qa_link" = "länk till Q&A",
-    "app.intro.or_contact" = " eller kontakta ",
-    "app.intro.ref_note" = "*Referensgruppen består av de äldre som under utvecklingen av OPWELLS deltog. De kommer från nio svenska projektparts- och samverkanskommuner.",
-    "app.tab.data_input" = "Ladda upp data",
-    "app.tab.define_groups" = "Definiera nya grupper",
-    "app.tab.plot" = "Illustrationer",
-    "app.tab.statistics" = "Statistiska jämförelser",
-    "data_input.help.main" = "Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).",
-    "data_input.help.format" = "Din fil för uppladdning ska innehålla varsin kolumn för respektive OPWELLS-fråga som benämns OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2 etc. Därtill kan du ladda upp ytterligare variabler för de gruppjämförelser du vill göra, exempelvis tidpunkt, kön, åldersgrupp.",
-    "data_input.help.template_prefix" = "Använd gärna denna mall för ditt data ",
-    "data_input.help.template_link" = "länk .xlsx",
-    "data_input.help.privacy" = "Tänk på att inte ladda upp personuppgifter.",
-    "data_input.upload.label" = "Ladda upp datafil:",
-    "data_input.delimiter.label" = "Avgränsare",
-    "data_input.delimiter.auto" = "Automatisk",
-    "data_input.delimiter.comma" = "Komma (CSV)",
-    "data_input.delimiter.tab" = "Tab (TSV)",
-    "data_input.delimiter.semicolon" = "Semikolon",
-    "data_input.validation.file_type" = "Vänligen ladda upp xlsx-, csv-, eller tsv-/txt-filer.",
-    "data_input.validation.parse_fail" = "Kunde inte analysera den uppladdade filen.",
-    "data_input.status.no_cols" = "Inga OPWELLS/F1-10/Q1-10-kolumner hittades. Poäng kan inte beräknas automatiskt.",
-    "data_input.status.score_exact" = "Skalad poäng beräknad från %d kolumner: %s.",
-    "data_input.status.score_nonexact" = "Skalad poäng beräknad från %d kolumner (exakt 10 rekommenderas): %s.",
-    "likert.ui.title" = "Beräkning av poäng",
-    "likert.ui.help" = "Klicka på kolumnnamn i förhandsgranskningen för att inkludera/exkludera dem från poängberäkningen.",
-    "likert.ui.compute" = "Beräkna skalad poäng",
-    "likert.preview.scaled_col" = "Skalad poäng",
-    "likert.preview.selected_cols" = "Valda kolumner: ",
-    "likert.preview.none" = "Ingen",
-    "likert.status.select_columns" = "Klicka på en eller flera förhandsgranskningskolumner för att välja dem för beräkning.",
-    "export.ui.title" = "Export av resultat",
-    "export.ui.help" = "Ladda ner användardata med kolumnen 'Skalad poäng', automatiskt beräknad från uppladdad fil.",
-    "export.ui.download_csv" = "Ladda ner resultattabell (.csv)",
-    "export.ui.download_xlsx" = "Ladda ner resultattabell (.xlsx)",
-    "export.column.scaled_score" = "Skalad poäng",
-    "export.validation.writexl" = "Paketet 'writexl' krävs för xlsx-export.",
-    "export.notif.no_data" = "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att kunna exportera.",
-    "export.notif.no_cols" = "Inga OPWELLS/frågefrågor hittades i den uppladdade filen. Export kommer att innehålla originaldata utan skalad poäng.",
-    "export.status.no_data" = "Ladda upp data först för att aktivera export.",
-    "export.status.no_cols" = "Inga OPWELLS/frågefrågor hittades i filen. Exporten innehåller originaldata utan skalad poäng.",
-    "export.status.pending" = "Skalad poäng beräknas automatiskt vid uppladdning av fil med matchande kolumnnamn.",
-    "export.status.ready" = "Exporten inkluderar aktuell skalad poäng.",
-    "plot.total_label" = "Totalt",
-    "plot.hover.no_valid" = "<b>%s</b><br>Inga giltiga poäng",
-    "plot.hover.summary" = "<b>%s</b><br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f<br>Antal svar: %d",
-    "plot.hover.raw" = "<b>%s</b><br>Rad: %d<br>Skalad poäng: %.1f",
-    "plot.hover.reference" = "<b>%s</b><br>Medel: %.1f<br>Två tredjedelar: %.1f-%.1f",
-    "plot.status.no_user_data" = "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att visa användardata.",
-    "plot.status.no_scores" = "Ingen skalad poäng beräknad för användardata.",
-    "plot.status.missing_reference" = "Referensdata saknas för: %s",
-    "plot.empty.no_data" = "Ingen data att visa för det aktuella urvalet.",
-    "plot.legend.user" = "Användardata",
-    "plot.legend.reference" = "Referensdata",
-    "plot.legend.raw" = "Individuella datapunkter",
-    "plot.axis.low" = "Lägst välbefinnande",
-    "plot.axis.high" = "Högst välbefinnande",
-    "plot.ui.left_intro" = "När inga grupper är valda visas referensdata. När en eller flera grupper väljs visas användardata. Håll pekaren över punkter eller sammanfattningar för detaljer.",
-    "plot.ui.combine.title" = "Kombinera grupper",
-    "plot.ui.combine.help" = "Välj ett namn och klicka på 'Lägg till kombinerad grupp' för att kombinera de valda grupperna.",
-    "plot.ui.combine.label" = "Namn på kombinerad grupp",
-    "plot.ui.combine.placeholder" = "T.ex. 'Kvinnor 2024-2025'",
-    "plot.ui.combine.add" = "Lägg till kombinerad grupp",
-    "plot.ui.right_intro" = "Sammanfattningsmarkören visar gruppens medelvärde. Linjen visar spannet där ungefär två tredjedelar av svaren ligger. Referensdata visas med separat symbol och linjestil.",
-    "plot.ui.load_data_for_groups" = "Ladda data för att välja grupper.",
-    "plot.ui.reference_groups" = "Välj referensgrupper",
-    "group.ui.defined_groups" = "Definierade grupper",
-    "plot.ui.combined_count" = "Kombinerade grupper (%d)",
-    "plot.ui.remove" = "Ta bort",
-    "plot.ui.include_total" = "Inkludera totalt",
-    "plot.ui.show_raw" = "Visa individuella datapunkter",
-    "plot.notif.enter_name" = "Ange ett namn för den kombinerade gruppen",
-    "plot.notif.select_at_least_one" = "Välj minst en grupp för att kombinera",
-    "plot.notif.create_failed" = "Kunde inte skapa kombinerad grupp",
-    "plot.notif.created" = "Kombinerad grupp '%s' skapad!",
-    "plot.notif.removed" = "Kombinerad grupp '%s' borttagen",
-    "define_groups.ui.title" = "Definiera nya grupper",
-    "define_groups.ui.help" = "Skapa och hantera kombinerade grupper som kan användas i Illustrationer och Statistiska jämförelser.",
-    "define_groups.ui.left_intro" = "Välj en eller flera grupper i en eller flera kolumner, ange ett namn och skapa en kombinerad grupp.",
-    "define_groups.ui.current_title" = "Befintliga kombinerade grupper",
-    "define_groups.ui.no_combined" = "Inga kombinerade grupper har skapats än.",
-    "define_groups.ui.load_data_for_groups" = "Ladda data för att välja grupper.",
-    "stats.ui.title" = "Statistiska jämförelser för användardata",
-    "stats.ui.help" = "För varje kategori visas medel, median, standardavvikelse och tvåtredjedelsintervall (16,7:e till 83,3:e percentilen). Parvisa gruppjämförelser visas under tabellen.",
-    "stats.ui.left_intro" = "Välj en eller flera grupper i en eller flera kolumner. Valda grupper jämförs mot varandra i tabellerna till höger.",
-    "stats.ui.summary_title" = "Deskriptiv statistik per kategori",
-    "stats.ui.pairwise_title" = "Parvisa jämförelser mellan grupper",
-    "stats.ui.load_data_for_groups" = "Ladda data för att välja grupper.",
-    "stats.ui.reference_groups" = "Välj referensgrupper",
-    "stats.ui.combine.title" = "Kombinera grupper",
-    "stats.ui.combine.help" = "Välj ett namn och klicka på 'Lägg till kombinerad grupp' för att kombinera de valda grupperna.",
-    "stats.ui.combine.label" = "Namn på kombinerad grupp",
-    "stats.ui.combine.placeholder" = "T.ex. 'Kvinnor 2024-2025'",
-    "stats.ui.combine.add" = "Lägg till kombinerad grupp",
-    "stats.ui.combined_count" = "Kombinerade grupper (%d)",
-    "stats.ui.remove" = "Ta bort",
-    "stats.ui.include_total" = "Inkludera totalt",
-    "stats.table.no_data" = "Ingen statistik tillgänglig.",
-    "stats.summary.col.category" = "Kategori",
-    "stats.summary.col.n" = "N",
-    "stats.summary.col.mean" = "Medel",
-    "stats.summary.col.median" = "Median",
-    "stats.summary.col.sd" = "SD",
-    "stats.summary.col.range_low" = "2/3 nedre",
-    "stats.summary.col.range_high" = "2/3 övre",
-    "stats.pairwise.col.group1" = "Grupp 1",
-    "stats.pairwise.col.group2" = "Grupp 2",
-    "stats.pairwise.col.n1" = "N1",
-    "stats.pairwise.col.n2" = "N2",
-    "stats.pairwise.col.mean_diff" = "Skillnad i medel",
-    "stats.pairwise.col.median_diff" = "Skillnad i median",
-    "stats.pairwise.col.p_value" = "p-värde (t-test)",
-    "stats.notif.no_data" = "Ingen användardata laddad. Ladda data i fliken Ladda upp data för att visa jämförelser.",
-    "stats.ui.summary.no_scores" = "Skalad poäng saknas. Beräkna poäng för att visa statistik per kategori.",
-    "stats.ui.summary.no_groups" = "Välj minst en grupp för att visa statistik per kategori.",
-    "stats.ui.pairwise.no_scores" = "Skalad poäng saknas. Beräkna poäng för att visa parvisa jämförelser.",
-    "stats.ui.pairwise.no_groups" = "Välj minst två grupper för att visa parvisa jämförelser.",
-    "stats.ui.pairwise.need_two" = "Minst två grupper med data krävs för parvisa jämförelser.",
-    "stats.download.no_summary_data" = "Ingen deskriptiv statistik finns att exportera.",
-    "stats.download.no_pairwise_data" = "Inga parvisa jämförelser finns att exportera."
-  ),
-  en = list(
-    "lang.swedish" = "Swedish",
-    "lang.english" = "English",
-    "app.title" = "Older Wellbeing - OPWELLS",
-    "app.intro.li1" = "OPWELLS is a questionnaire based on 10 items to measure older persons' wellbeing. OPWELLS is an acronym for the English name Older Persons Wellbeing Scale.",
-    "app.intro.li2" = "This web application makes it possible to generate wellbeing measures from individual questionnaire responses.",
-    "app.intro.li3" = "The web application also provides visualizations and statistical comparisons within your dataset and against the reference population*",
-    "app.intro.li4" = "Below, you can upload your questionnaire responses together with additional variables you want to compare.",
-    "app.intro.project_prefix" = "OPWELLS and this web application were developed within the project Measurement of Older Persons' Wellbeing and funded by the Kamprad Family Foundation. If you have questions about OPWELLS, you can read more here ",
-    "app.intro.qa_link" = "Q&A link",
-    "app.intro.or_contact" = " or contact ",
-    "app.intro.ref_note" = "*The reference group consists of older people who participated during the development of OPWELLS. They come from nine Swedish project and collaboration municipalities.",
-    "app.tab.data_input" = "Upload data",
-    "app.tab.define_groups" = "Define new groups",
-    "app.tab.plot" = "Visualizations",
-    "app.tab.statistics" = "Statistical comparisons",
-    "data_input.help.main" = "Upload a data file (.xlsx, .csv, .tsv, or .txt).",
-    "data_input.help.format" = "The uploaded file should include one column per OPWELLS item named OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2, etc. You may also upload additional variables for group comparisons, for example timepoint, sex, or age group.",
-    "data_input.help.template_prefix" = "You can use this upload template ",
-    "data_input.help.template_link" = "link .xlsx",
-    "data_input.help.privacy" = "Do not upload personal identifiers.",
-    "data_input.upload.label" = "Upload data file:",
-    "data_input.delimiter.label" = "Delimiter",
-    "data_input.delimiter.auto" = "Automatic",
-    "data_input.delimiter.comma" = "Comma (CSV)",
-    "data_input.delimiter.tab" = "Tab (TSV)",
-    "data_input.delimiter.semicolon" = "Semicolon",
-    "data_input.validation.file_type" = "Please upload xlsx, csv, tsv, or txt files.",
-    "data_input.validation.parse_fail" = "Could not parse the uploaded file.",
-    "data_input.status.no_cols" = "No OPWELLS/F1-10/Q1-10 columns were found. Scores cannot be computed automatically.",
-    "data_input.status.score_exact" = "Scaled score computed from %d columns: %s.",
-    "data_input.status.score_nonexact" = "Scaled score computed from %d columns (exactly 10 recommended): %s.",
-    "likert.ui.title" = "Score calculation",
-    "likert.ui.help" = "Click column names in the preview to include or exclude them from score calculation.",
-    "likert.ui.compute" = "Compute scaled score",
-    "likert.preview.scaled_col" = "Scaled score",
-    "likert.preview.selected_cols" = "Selected columns: ",
-    "likert.preview.none" = "None",
-    "likert.status.select_columns" = "Click one or more preview columns to select them for calculation.",
-    "export.ui.title" = "Export results",
-    "export.ui.help" = "Download user data with the 'Scaled score' column, automatically computed from the uploaded file.",
-    "export.ui.download_csv" = "Download result table (.csv)",
-    "export.ui.download_xlsx" = "Download result table (.xlsx)",
-    "export.column.scaled_score" = "Scaled score",
-    "export.validation.writexl" = "The 'writexl' package is required for xlsx export.",
-    "export.notif.no_data" = "No user data loaded. Upload data in the Upload data tab to enable export.",
-    "export.notif.no_cols" = "No OPWELLS/question columns were found in the uploaded file. Export will contain original data without scaled score.",
-    "export.status.no_data" = "Upload data first to enable export.",
-    "export.status.no_cols" = "No OPWELLS/question columns were found in the file. Export contains original data without scaled score.",
-    "export.status.pending" = "Scaled score is computed automatically when uploading a file with matching column names.",
-    "export.status.ready" = "Export includes the current scaled score.",
-    "plot.total_label" = "Total",
-    "plot.hover.no_valid" = "<b>%s</b><br>No valid scores",
-    "plot.hover.summary" = "<b>%s</b><br>Mean: %.1f<br>Middle two-thirds: %.1f-%.1f<br>Responses: %d",
-    "plot.hover.raw" = "<b>%s</b><br>Row: %d<br>Scaled score: %.1f",
-    "plot.hover.reference" = "<b>%s</b><br>Mean: %.1f<br>Middle two-thirds: %.1f-%.1f",
-    "plot.status.no_user_data" = "No user data loaded. Upload data in the Upload data tab to display user data.",
-    "plot.status.no_scores" = "No scaled score computed for user data.",
-    "plot.status.missing_reference" = "Reference data missing for: %s",
-    "plot.empty.no_data" = "No data to display for the current selection.",
-    "plot.legend.user" = "User data",
-    "plot.legend.reference" = "Reference data",
-    "plot.legend.raw" = "Individual data points",
-    "plot.axis.low" = "Lowest wellbeing",
-    "plot.axis.high" = "Highest wellbeing",
-    "plot.ui.left_intro" = "When no groups are selected, reference data is shown. When one or more groups are selected, user data is shown. Hover points and summaries for details.",
-    "plot.ui.combine.title" = "Combine groups",
-    "plot.ui.combine.help" = "Enter a name and click 'Add combined group' to combine selected groups.",
-    "plot.ui.combine.label" = "Name of combined group",
-    "plot.ui.combine.placeholder" = "E.g. 'Women 2024-2025'",
-    "plot.ui.combine.add" = "Add combined group",
-    "plot.ui.right_intro" = "The summary marker shows the group mean. The line shows the range where about two thirds of responses fall. Reference data is shown with a separate marker and line style.",
-    "plot.ui.load_data_for_groups" = "Upload data to select groups.",
-    "plot.ui.reference_groups" = "Select reference groups",
-    "group.ui.defined_groups" = "Defined groups",
-    "plot.ui.combined_count" = "Combined groups (%d)",
-    "plot.ui.remove" = "Remove",
-    "plot.ui.include_total" = "Include total",
-    "plot.ui.show_raw" = "Show individual data points",
-    "plot.notif.enter_name" = "Enter a name for the combined group",
-    "plot.notif.select_at_least_one" = "Select at least one group to combine",
-    "plot.notif.create_failed" = "Could not create combined group",
-    "plot.notif.created" = "Combined group '%s' created!",
-    "plot.notif.removed" = "Combined group '%s' removed",
-    "define_groups.ui.title" = "Define new groups",
-    "define_groups.ui.help" = "Create and manage combined groups that can be used in Visualizations and Statistical comparisons.",
-    "define_groups.ui.left_intro" = "Select one or more groups in one or more columns, enter a name, and create a combined group.",
-    "define_groups.ui.current_title" = "Existing combined groups",
-    "define_groups.ui.no_combined" = "No combined groups have been created yet.",
-    "define_groups.ui.load_data_for_groups" = "Upload data to select groups.",
-    "stats.ui.title" = "Statistical comparisons for user data",
-    "stats.ui.help" = "For each category, mean, median, standard deviation, and middle two-thirds interval (16.7th to 83.3rd percentile) are shown. Pairwise group comparisons are shown below.",
-    "stats.ui.left_intro" = "Select one or more groups in one or more columns. Selected groups are compared in the tables on the right.",
-    "stats.ui.summary_title" = "Descriptive statistics by category",
-    "stats.ui.pairwise_title" = "Pairwise comparisons between groups",
-    "stats.ui.load_data_for_groups" = "Upload data to select groups.",
-    "stats.ui.reference_groups" = "Select reference groups",
-    "stats.ui.combine.title" = "Combine groups",
-    "stats.ui.combine.help" = "Enter a name and click 'Add combined group' to combine selected groups.",
-    "stats.ui.combine.label" = "Name of combined group",
-    "stats.ui.combine.placeholder" = "E.g. 'Women 2024-2025'",
-    "stats.ui.combine.add" = "Add combined group",
-    "stats.ui.combined_count" = "Combined groups (%d)",
-    "stats.ui.remove" = "Remove",
-    "stats.ui.include_total" = "Include total",
-    "stats.table.no_data" = "No statistics available.",
-    "stats.summary.col.category" = "Category",
-    "stats.summary.col.n" = "N",
-    "stats.summary.col.mean" = "Mean",
-    "stats.summary.col.median" = "Median",
-    "stats.summary.col.sd" = "SD",
-    "stats.summary.col.range_low" = "2/3 lower",
-    "stats.summary.col.range_high" = "2/3 upper",
-    "stats.pairwise.col.group1" = "Group 1",
-    "stats.pairwise.col.group2" = "Group 2",
-    "stats.pairwise.col.n1" = "N1",
-    "stats.pairwise.col.n2" = "N2",
-    "stats.pairwise.col.mean_diff" = "Mean difference",
-    "stats.pairwise.col.median_diff" = "Median difference",
-    "stats.pairwise.col.p_value" = "p-value (t-test)",
-    "stats.notif.no_data" = "No user data loaded. Upload data in the Upload data tab to view comparisons.",
-    "stats.ui.summary.no_scores" = "Scaled scores are missing. Compute scores to show category statistics.",
-    "stats.ui.summary.no_groups" = "Select at least one group to show category statistics.",
-    "stats.ui.pairwise.no_scores" = "Scaled scores are missing. Compute scores to show pairwise comparisons.",
-    "stats.ui.pairwise.no_groups" = "Select at least two groups to show pairwise comparisons.",
-    "stats.ui.pairwise.need_two" = "At least two groups with data are required for pairwise comparisons.",
-    "stats.download.no_summary_data" = "No descriptive statistics are available for export.",
-    "stats.download.no_pairwise_data" = "No pairwise comparisons are available for export."
-  )
-)
+i18n_locale_path <- file.path("data", "locales.yml")
+
+i18n_resolve_locale_path <- function(path = i18n_locale_path) {
+  candidates <- c(path)
+
+  for (idx in seq_len(sys.nframe())) {
+    frame <- sys.frame(idx)
+    ofile <- frame$ofile
+    if (is.null(ofile)) {
+      next
+    }
+
+    script_dir <- dirname(normalizePath(ofile, winslash = "/", mustWork = FALSE))
+    repo_root <- normalizePath(file.path(script_dir, ".."), winslash = "/", mustWork = FALSE)
+    candidates <- c(
+      candidates,
+      file.path(script_dir, path),
+      file.path(repo_root, path)
+    )
+  }
+
+  existing <- candidates[file.exists(candidates)]
+  if (!length(existing)) {
+    return(path)
+  }
+
+  existing[[1]]
+}
+
+i18n_load_locales <- function(path = i18n_locale_path) {
+  resolved_path <- i18n_resolve_locale_path(path)
+
+  if (!file.exists(resolved_path)) {
+    stop(sprintf("Locale file not found: %s", resolved_path), call. = FALSE)
+  }
+
+  locales <- yaml::read_yaml(resolved_path)
+  if (!is.list(locales) || !length(locales)) {
+    stop("Locale file is empty or malformed.", call. = FALSE)
+  }
+
+  missing_langs <- setdiff(i18n_supported_languages, names(locales))
+  if (length(missing_langs)) {
+    stop(
+      sprintf(
+        "Locale file is missing supported languages: %s",
+        paste(missing_langs, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
+  locales
+}
+
+i18n_locales <- i18n_load_locales()
 
 i18n_normalize_language <- function(lang) {
   if (!is.character(lang) || !length(lang) || is.na(lang)) {
@@ -293,6 +89,11 @@ i18n_t <- function(lang, key, ...) {
   }
 
   do.call(sprintf, c(list(template), dots))
+}
+
+i18n_t_markdown <- function(lang, key, ...) {
+  text <- i18n_t(lang, key, ...)
+  htmltools::HTML(commonmark::markdown_html(text))
 }
 
 i18n_format_number <- function(x, lang, digits = 2) {

@@ -1,19 +1,17 @@
-mod_data_input_ui <- function(id, lang = i18n_default_language, left_extra_ui = NULL) {
+mod_data_input_ui <- function(id, lang = i18n_default_language, left_extra_ui = NULL, right_extra_ui = NULL) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
+  tr_md <- function(key, ...) i18n_t_markdown(lang, key, ...)
 
   fluidRow(
     column(
       width = 3,
-      helpText(
-        tr("data_input.help.main"),
-        tags$br(), tags$br(),
-        tr("data_input.help.format"),
-        tags$br(), tags$br(),
+      tags$div(
+        style = "margin-bottom: 12px;",
+        helpText(tr_md("data_input.help"),
         tr("data_input.help.template_prefix"),
-        downloadLink(ns("download_template"), tr("data_input.help.template_link")),
-        tags$br(), tags$br(),
-        tr("data_input.help.privacy")
+        downloadLink(ns("download_template"), tr("data_input.help.template_link"))),
+        hr()
       ),
       fileInput(
         ns("upload_file"),
@@ -25,7 +23,8 @@ mod_data_input_ui <- function(id, lang = i18n_default_language, left_extra_ui = 
     ),
     column(
       width = 9,
-      uiOutput(ns("upload_status"))
+      uiOutput(ns("upload_status")),
+      right_extra_ui
     )
   )
 }
@@ -215,18 +214,16 @@ mod_data_input_server <- function(id, lang = NULL) {
 
     load_file <- function(file_info, delimiter) {
       ext <- tolower(tools::file_ext(file_info$name))
-      validate(
-        need(ext %in% c("xlsx", "csv", "tsv", "txt"), tr("data_input.validation.file_type"))
-      )
 
       parsed <- tryCatch(
         parse_uploaded_data(file_info$datapath, ext, delimiter),
         error = function(e) NULL
       )
 
-      validate(
-        need(!is.null(parsed) && ncol(parsed) > 0, tr("data_input.validation.parse_fail"))
-      )
+      if (is.null(parsed) || ncol(parsed) == 0) {
+        showNotification(tr("data_input.validation.parse_fail"), type = "error", duration = 5)
+        return()
+      }
 
       df <- trim_empty_rows_cols(parsed)
       current_data(df)
@@ -250,6 +247,12 @@ mod_data_input_server <- function(id, lang = NULL) {
         return()
       }
 
+      ext <- tolower(tools::file_ext(input$upload_file$name))
+      if (!ext %in% c("xlsx", "csv", "tsv", "txt")) {
+        showNotification(tr("data_input.validation.file_type"), type = "error", duration = 5)
+        return()
+      }
+
       delimiter_choice("auto")
       uploaded_file_info(input$upload_file)
       load_file(input$upload_file, "auto")
@@ -265,30 +268,58 @@ mod_data_input_server <- function(id, lang = NULL) {
 
     output$upload_status <- renderUI({
       df <- current_data()
-      sel <- selected_cols()
 
       if (!is.data.frame(df) || nrow(df) == 0) {
         return(NULL)
       }
 
+      NULL
+    })
+
+    last_notification_state <- reactiveVal(NULL)
+    no_cols_notification_shown <- reactiveVal(FALSE)
+
+    observe({
+      df <- current_data()
+      sel <- selected_cols()
+      scr <- scores()
+
+      if (!is.data.frame(df) || nrow(df) == 0) {
+        last_notification_state(NULL)
+        no_cols_notification_shown(FALSE)
+        return()
+      }
+
       if (!length(sel)) {
-        return(div(
-          class = "alert alert-warning",
-          tr("data_input.status.no_cols")
-        ))
+        if (!isTRUE(no_cols_notification_shown())) {
+          showNotification(
+            tr("data_input.status.no_cols"),
+            type = "warning",
+            duration = 5
+          )
+          no_cols_notification_shown(TRUE)
+        }
+        last_notification_state(NULL)
+        return()
       }
 
-      n <- length(sel)
-      msg <- if (n == 10) {
-        tr("data_input.status.score_exact", n, paste(sel, collapse = ", "))
-      } else {
-        tr("data_input.status.score_nonexact", n, paste(sel, collapse = ", "))
+      no_cols_notification_shown(FALSE)
+
+      current_state <- list(n_cols = length(sel), has_scores = !is.null(scr))
+      last_state <- last_notification_state()
+
+      if (!identical(current_state, last_state) && !is.null(scr)) {
+        n <- length(sel)
+        msg <- if (n == 10) {
+          tr("data_input.status.score_exact", n, paste(sel, collapse = ", "))
+        } else {
+          tr("data_input.status.score_nonexact", n, paste(sel, collapse = ", "))
+        }
+
+        showNotification(msg, type = "message", duration = 3)
       }
 
-      div(
-        class = if (n == 10) "alert alert-success" else "alert alert-warning",
-        msg
-      )
+      last_notification_state(current_state)
     })
 
     data <- reactive({

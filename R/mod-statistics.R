@@ -1,25 +1,25 @@
 mod_statistics_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
+  tr_md <- function(key, ...) i18n_t_markdown(lang, key, ...)
 
   fluidRow(
     column(
       width = 3,
-      h5(tr("stats.ui.title")),
-      helpText(tr("stats.ui.help")),
-      p(tr("stats.ui.left_intro")),
+      helpText(tr_md("stats.help")),
+      hr(),
       uiOutput(ns("group_selectors")),
       uiOutput(ns("reference_group_selector")),
       uiOutput(ns("include_total_toggle"))
     ),
     column(
       width = 9,
-      h4(tr("stats.ui.summary_title")),
+      h4(tr("stats.summary_title")),
       div(
         style = "margin-bottom: 10px;",
-        downloadButton(ns("download_summary_csv"), tr("export.ui.download_csv")),
+        downloadButton(ns("download_summary_csv"), tr("export.download_csv")),
         tags$span(style = "display: inline-block; width: 8px;"),
-        downloadButton(ns("download_summary_xlsx"), tr("export.ui.download_xlsx"))
+        downloadButton(ns("download_summary_xlsx"), tr("export.download_xlsx"))
       ),
       uiOutput(ns("summary_statistics_ui")),
       uiOutput(ns("pairwise_section_ui"))
@@ -171,7 +171,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     output$group_selectors <- renderUI({
       col_groups <- column_groups()
       if (!length(col_groups)) {
-        return(p(tr("stats.ui.load_data_for_groups"), style = "color: #6b6b6b;"))
+        return(p(tr("stats.load_data_for_groups"), style = "color: #6b6b6b;"))
       }
 
       lapply(names(col_groups), function(col_nm) {
@@ -204,7 +204,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       selectizeInput(
         session$ns("reference_groups"),
-        label = tr("stats.ui.reference_groups"),
+        label = tr("stats.reference_groups"),
         choices = choices,
         selected = current_reference_groups(),
         multiple = TRUE,
@@ -219,7 +219,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       checkboxInput(
         session$ns("include_total"),
-        label = tr("stats.ui.include_total"),
+        label = tr("stats.include_total"),
         value = current_include_total()
       )
     })
@@ -491,12 +491,12 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       tagList(
-        h4(tr("stats.ui.pairwise_title")),
+        h4(tr("stats.pairwise_title")),
         div(
           style = "margin-bottom: 10px;",
-          downloadButton(session$ns("download_pairwise_csv"), tr("export.ui.download_csv")),
+          downloadButton(session$ns("download_pairwise_csv"), tr("export.download_csv")),
           tags$span(style = "display: inline-block; width: 8px;"),
-          downloadButton(session$ns("download_pairwise_xlsx"), tr("export.ui.download_xlsx"))
+          downloadButton(session$ns("download_pairwise_xlsx"), tr("export.download_xlsx"))
         ),
         build_table(pairwise_df)
       )
@@ -577,7 +577,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       state <- current_likert_state()
       if (is.null(state) || is.null(state$scaled_scores)) {
-        return(div(class = "text-muted", tr("stats.ui.summary.no_scores")))
+        return(div(class = "text-muted", tr("stats.summary.no_scores")))
       }
 
       if (!length(selected_group_definitions())) {
