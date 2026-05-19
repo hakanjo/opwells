@@ -31,11 +31,11 @@ server <- function(input, output, session) {
             style = "display: flex; gap: 8px;",
             lapply(i18n_supported_languages, function(l) {
               flag_src <- switch(l,
-                "sv" = "sv_flag.svg", # Place these SVGs in www/
+                "sv" = "sv_flag.svg",
                 "en" = "gb_flag.svg"
               )
               tags$img(
-                src = flag_src, # Removed 'www/' prefix
+                src = flag_src,
                 class = paste0("flag-icon", if (lang == l) " active" else " inactive"),
                 style = "width: 32px; height: 22px; cursor: pointer;",
                 onclick = sprintf("Shiny.setInputValue('app_language', '%s', {priority: 'event'})", l),
@@ -48,28 +48,7 @@ server <- function(input, output, session) {
       ),
       tabsetPanel(
         id = "main_tab",
-        tabPanel(
-          "Om OPWELLS",
-          tags$div(
-            style = "margin: 16px 0 20px 0;",
-            tags$ul(
-              tags$li(tr("app.intro.li1")),
-              tags$li(tr("app.intro.li2")),
-              tags$li(tr("app.intro.li3")),
-              tags$li(tr("app.intro.li4")),
-              tags$li(
-                tr("app.intro.project_prefix"),
-                tags$a(tr("app.intro.qa_link"), href = "#"),
-                tr("app.intro.or_contact"),
-                tags$a("jeanette.melin@lnu.se", href = "mailto:jeanette.melin@lnu.se"),
-                "."
-              )
-            ),
-            tags$p(
-              tags$em(tr("app.intro.ref_note"))
-            )
-          )
-        ),
+        mod_about_ui("about", lang = lang),
         tabPanel(
           tr("app.tab.data_input"),
           value = "data_input",
