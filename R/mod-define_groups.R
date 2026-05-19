@@ -2,26 +2,23 @@ mod_define_groups_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
 
-  tagList(
-    br(),
-    h5(tr("define_groups.ui.title")),
-    helpText(tr("define_groups.ui.help")),
-    fluidRow(
-      column(
-        width = 4,
-        p(tr("define_groups.ui.left_intro")),
-        uiOutput(ns("group_selectors")),
-        hr(),
-        p(strong(tr("plot.ui.combine.title")), style = "margin-top: 20px;"),
-        p(tr("plot.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
-        textInput(ns("combined_group_label"), label = tr("plot.ui.combine.label"), placeholder = tr("plot.ui.combine.placeholder")),
-        actionButton(ns("add_combined_group"), tr("plot.ui.combine.add"), class = "btn-primary")
-      ),
-      column(
-        width = 8,
-        h4(tr("define_groups.ui.current_title")),
-        uiOutput(ns("combined_groups_list"))
-      )
+  fluidRow(
+    column(
+      width = 3,
+      h5(tr("define_groups.ui.title")),
+      helpText(tr("define_groups.ui.help")),
+      p(tr("define_groups.ui.left_intro")),
+      uiOutput(ns("group_selectors")),
+      hr(),
+      p(strong(tr("plot.ui.combine.title")), style = "margin-top: 20px;"),
+      p(tr("plot.ui.combine.help"), style = "font-size: 0.9em; color: #6b6b6b;"),
+      textInput(ns("combined_group_label"), label = tr("plot.ui.combine.label"), placeholder = tr("plot.ui.combine.placeholder")),
+      actionButton(ns("add_combined_group"), tr("plot.ui.combine.add"), class = "btn-primary")
+    ),
+    column(
+      width = 9,
+      h4(tr("define_groups.ui.current_title")),
+      uiOutput(ns("combined_groups_list"))
     )
   )
 }

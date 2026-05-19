@@ -73,9 +73,10 @@ server <- function(input, output, session) {
         tabPanel(
           tr("app.tab.data_input"),
           value = "data_input",
-          tagList(
-            mod_data_input_ui("data_input", lang = lang),
-            uiOutput("data_input_export_ui")
+          mod_data_input_ui(
+            "data_input",
+            lang = lang,
+            left_extra_ui = uiOutput("data_input_export_ui")
           )
         ),
         tabPanel(

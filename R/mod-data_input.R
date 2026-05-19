@@ -1,25 +1,32 @@
-mod_data_input_ui <- function(id, lang = i18n_default_language) {
+mod_data_input_ui <- function(id, lang = i18n_default_language, left_extra_ui = NULL) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
 
-  tagList(
-    helpText(
-      tr("data_input.help.main"),
-      tags$br(), tags$br(),
-      tr("data_input.help.format"),
-      tags$br(), tags$br(),
-      tr("data_input.help.template_prefix"),
-      downloadLink(ns("download_template"), tr("data_input.help.template_link")),
-      tags$br(), tags$br(),
-      tr("data_input.help.privacy")
+  fluidRow(
+    column(
+      width = 3,
+      helpText(
+        tr("data_input.help.main"),
+        tags$br(), tags$br(),
+        tr("data_input.help.format"),
+        tags$br(), tags$br(),
+        tr("data_input.help.template_prefix"),
+        downloadLink(ns("download_template"), tr("data_input.help.template_link")),
+        tags$br(), tags$br(),
+        tr("data_input.help.privacy")
+      ),
+      fileInput(
+        ns("upload_file"),
+        tr("data_input.upload.label"),
+        accept = c(".xlsx", ".csv", ".tsv", ".txt")
+      ),
+      uiOutput(ns("delimiter_ui")),
+      left_extra_ui
     ),
-    fileInput(
-      ns("upload_file"),
-      tr("data_input.upload.label"),
-      accept = c(".xlsx", ".csv", ".tsv", ".txt")
-    ),
-    uiOutput(ns("delimiter_ui")),
-    uiOutput(ns("upload_status"))
+    column(
+      width = 9,
+      uiOutput(ns("upload_status"))
+    )
   )
 }
 

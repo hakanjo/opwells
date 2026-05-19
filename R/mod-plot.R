@@ -685,6 +685,7 @@ mod_plot_ui <- function(id, lang = i18n_default_language) {
       column(
         width = 3,
         p(tr("plot.ui.left_intro")),
+        p(tr("plot.ui.right_intro")),
         uiOutput(ns("group_selectors")),
         uiOutput(ns("reference_group_selector")),
         hr(),
@@ -694,7 +695,6 @@ mod_plot_ui <- function(id, lang = i18n_default_language) {
       ),
       column(
         width = 9,
-        p(tr("plot.ui.right_intro")),
         plotly::plotlyOutput(ns("comparison_plot"), height = "380px")
       )
     )

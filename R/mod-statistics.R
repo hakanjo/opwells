@@ -2,30 +2,27 @@ mod_statistics_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
 
-  tagList(
-    br(),
-    h5(tr("stats.ui.title")),
-    helpText(tr("stats.ui.help")),
-    fluidRow(
-      column(
-        width = 4,
-        p(tr("stats.ui.left_intro")),
-        uiOutput(ns("group_selectors")),
-        uiOutput(ns("reference_group_selector")),
-        uiOutput(ns("include_total_toggle"))
+  fluidRow(
+    column(
+      width = 3,
+      h5(tr("stats.ui.title")),
+      helpText(tr("stats.ui.help")),
+      p(tr("stats.ui.left_intro")),
+      uiOutput(ns("group_selectors")),
+      uiOutput(ns("reference_group_selector")),
+      uiOutput(ns("include_total_toggle"))
+    ),
+    column(
+      width = 9,
+      h4(tr("stats.ui.summary_title")),
+      div(
+        style = "margin-bottom: 10px;",
+        downloadButton(ns("download_summary_csv"), tr("export.ui.download_csv")),
+        tags$span(style = "display: inline-block; width: 8px;"),
+        downloadButton(ns("download_summary_xlsx"), tr("export.ui.download_xlsx"))
       ),
-      column(
-        width = 8,
-        h4(tr("stats.ui.summary_title")),
-        div(
-          style = "margin-bottom: 10px;",
-          downloadButton(ns("download_summary_csv"), tr("export.ui.download_csv")),
-          tags$span(style = "display: inline-block; width: 8px;"),
-          downloadButton(ns("download_summary_xlsx"), tr("export.ui.download_xlsx"))
-        ),
-        uiOutput(ns("summary_statistics_ui")),
-        uiOutput(ns("pairwise_section_ui"))
-      )
+      uiOutput(ns("summary_statistics_ui")),
+      uiOutput(ns("pairwise_section_ui"))
     )
   )
 }
