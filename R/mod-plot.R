@@ -694,7 +694,7 @@ mod_plot_ui <- function(id, lang = i18n_default_language) {
       ),
       column(
         width = 9,
-        plotly::plotlyOutput(ns("comparison_plot"), height = "380px")
+        plotly::plotlyOutput(ns("comparison_plot"), height = "68vh")
       )
     )
   )
@@ -808,7 +808,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
       }
       lapply(names(groups), function(col) {
         label <- if (identical(col, plot_combined_groups_column_key())) {
-          tr("plot.defined_groups")
+          tr("define_groups.defined_groups")
         } else {
           col
         }

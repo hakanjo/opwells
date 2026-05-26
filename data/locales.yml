@@ -10,7 +10,7 @@ sv:
     - I denna webbapplikation kan du ta fram mått på välbefinnande utifrån individers enkätsvar.
     - Du kan även illustrera skillnader mellan grupper och göra statistiska jämförelser inom dina data samt jämföra deras svar mot en referenspopulation*.
     - Under "Ladda upp data" kan du ladda upp dina enkätsvar tillsammans med ytterligare variabler som du vill kunna göra jämförelser för. Använd gärna mallen som finns där för att se hur dina data ska vara strukturerade.
-    - OPWELLS är framtagna inom ramen för projektet "Mätning av äldres välbefinnande" och har finansierats av [Familjen Kamprads Stiftelse](https://familjenkampradsstiftelse.se). Om du har frågor om OPWELLS kan du [läsa mer här](#) eller kontakta [jeanette.melin@lnu.se](mailto:jeanette.melin@lnu.se).
+    - OPWELLS är framtagna inom ramen för projektet "Mätning av äldres välbefinnande" och har finansierats av [Familjen Kamprads Stiftelse 🔗](https://familjenkampradsstiftelse.se). Om du har frågor om OPWELLS kan du [läsa mer här 🔗](#) eller kontakta [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
 
     \**Referensgruppen består av de (anonyma) personerna som deltog i utvecklingen av OPWELLS. De kommer från nio svenska projektparts- och samverkanskommuner.*
   
@@ -46,7 +46,7 @@ sv:
   export.status.no_cols: Hittade inga OPWELLS/F/Q-kolumner i den uppladdade filen. Filerna innehåller originaldata utan OPWELLS-mått.
   export.status.ready: Exporten inkluderar OPWELLS-mått.
   
-  define_groups.title: Definiera grupper
+  define_groups.title: Definierade grupper
   define_groups.help: |-
     Definiera nya grupper utifrån kombinationer av variabler i dina data. Grupperna kan sen användas för illustrationer och statistiska jämförelser.
     
@@ -61,6 +61,7 @@ sv:
   define_groups.notif.created: Grupp '%s' skapad.
   define_groups.remove: Ta bort
   define_groups.notif.removed: Grupp '%s' borttagen.
+  define_groups.defined_groups: Definierade grupper
 
   plot.help: |-
     Illustrera skillnader i välbefinnande mellan grupper.
@@ -86,11 +87,10 @@ sv:
   plot.axis.low: Lägst välbefinnande
   plot.axis.high: Högst välbefinnande
   plot.reference_groups: Välj referensgrupper
-  plot.defined_groups: Definierade grupper
-  plot.combined_count: Kombinerade grupper (%d)
   plot.include_total: Visa total
   plot.total_label: Total
   plot.show_raw: Visa individuella datapunkter
+  
   stats.title: Statistiska jämförelser för användardata
   stats.help: |-
     Sammanfatta skillnader i välbefinnande mellan grupper.
@@ -121,6 +121,7 @@ sv:
   stats.summary.no_scores: OPWELLS saknas.
   stats.download.no_summary_data: Ingen deskriptiv statistik att exportera.
   stats.download.no_pairwise_data: Inga parvisa jämförelser att exportera.
+  stats.include_total: Inkludera total
 
 en:
   app.title: Older Persons' Wellbeing - OPWELLS
@@ -173,7 +174,7 @@ en:
   export.status.no_cols: No OPWELLS/F/Q columns were found in the uploaded file. The files contain the original data without an OPWELLS measure.
   export.status.ready: The export includes the OPWELLS measure.
 
-  define_groups.title: Define groups
+  define_groups.title: Defined groups
   define_groups.help: |-
     Define new groups based on combinations of variables in your data. The groups can then be used for illustrations and statistical comparisons.
     
@@ -187,6 +188,7 @@ en:
   define_groups.notif.created: Group '%s' created.
   define_groups.remove: Remove
   define_groups.notif.removed: Group '%s' removed.
+  define_groups.defined_groups: Defined groups
 
   plot.help: |-
     Illustrate differences in wellbeing between groups.
@@ -212,8 +214,6 @@ en:
   plot.axis.low: Lowest wellbeing
   plot.axis.high: Highest wellbeing
   plot.reference_groups: Select reference groups
-  plot.defined_groups: Defined groups
-  plot.combined_count: Combined groups (%d)
   plot.include_total: Show total
   plot.total_label: Total
   plot.show_raw: Show individual data points
@@ -249,3 +249,4 @@ en:
   stats.summary.no_scores: OPWELLS is missing.
   stats.download.no_summary_data: No descriptive statistics to export.
   stats.download.no_pairwise_data: No pairwise comparisons to export.
+  stats.include_total: Include total

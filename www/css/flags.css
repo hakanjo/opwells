@@ -5,12 +5,14 @@
 .flag-icon {
   filter: grayscale(100%);
   opacity: 0.6;
-  transition: filter 0.2s, opacity 0.2s;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(36, 69, 21, 0.12);
+  transition: filter 0.2s, opacity 0.2s, transform 0.2s, border-color 0.2s;
 }
 .flag-icon.active {
   filter: none;
   opacity: 1;
-  border-radius: 3px;
+  transform: translateY(-1px);
 }
 .flag-icon.inactive:hover {
   filter: grayscale(40%);

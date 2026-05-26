@@ -8,7 +8,10 @@ file_list <- list.files(
 for (file in file_list) { source(file) }
 
 ui <- fluidPage(
-  tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "css/flags.css")),
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "css/style.css"),
+    tags$link(rel = "stylesheet", type = "text/css", href = "css/flags.css")
+  ),
   uiOutput("app_ui")
 )
 

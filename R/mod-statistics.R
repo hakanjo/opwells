@@ -176,7 +176,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       lapply(names(col_groups), function(col_nm) {
         label <- if (identical(col_nm, plot_combined_groups_column_key())) {
-          tr("group.ui.defined_groups")
+          tr("define_groups.defined_groups")
         } else {
           col_nm
         }
