@@ -282,14 +282,14 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         return(data.frame())
       }
 
-      required_cols <- c("group", "mean", "sd", "q_1_6", "q_5_6")
+      required_cols <- c("group", "mean", "sd", "q_1_6", "q_5_6", "n")
       if (!all(required_cols %in% names(ref_df))) {
         return(data.frame())
       }
 
       out <- data.frame(
         category = trimws(as.character(ref_df$group)),
-        n = NA_integer_,
+        n = suppressWarnings(as.integer(round(as.numeric(ref_df$n)))),
         mean = suppressWarnings(as.numeric(ref_df$mean)),
         sd = suppressWarnings(as.numeric(ref_df$sd)),
         range_low = suppressWarnings(as.numeric(ref_df$q_1_6)),
@@ -410,13 +410,23 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
             return(NULL)
           }
 
+          ref_mean <- ref_row$mean[1]
+          ref_sd <- ref_row$sd[1]
+          ref_n <- ref_row$n[1]
+          p_val <- calculate_ttest_pvalue_from_summary(
+            x = x1,
+            ref_mean = ref_mean,
+            ref_sd = ref_sd,
+            ref_n = ref_n
+          )
+
           data.frame(
             group_1 = g1,
             group_2 = g2,
             n1 = length(x1),
-            n2 = NA_integer_,
-            mean_diff = mean(x1) - ref_row$mean[1],
-            p_value = NA_real_,
+            n2 = suppressWarnings(as.integer(round(as.numeric(ref_n)))),
+            mean_diff = mean(x1) - ref_mean,
+            p_value = p_val,
             stringsAsFactors = FALSE
           )
         } else {

@@ -32,6 +32,56 @@ calculate_ttest_pvalue <- function(x, y) {
   })
 }
 
+calculate_ttest_pvalue_from_summary <- function(x, ref_mean, ref_sd, ref_n) {
+  tryCatch({
+    x_num <- suppressWarnings(as.numeric(x))
+    x_clean <- x_num[!is.na(x_num)]
+
+    ref_mean_num <- suppressWarnings(as.numeric(ref_mean))[1]
+    ref_sd_num <- suppressWarnings(as.numeric(ref_sd))[1]
+    ref_n_num <- suppressWarnings(as.numeric(ref_n))[1]
+
+    if (length(x_clean) < 2 || !is.finite(ref_mean_num) || !is.finite(ref_sd_num) || !is.finite(ref_n_num)) {
+      return(NA_real_)
+    }
+
+    n1 <- length(x_clean)
+    n2 <- as.integer(round(ref_n_num))
+
+    if (n2 < 2) {
+      return(NA_real_)
+    }
+
+    s1 <- stats::sd(x_clean)
+    if (!is.finite(s1) || !is.finite(ref_sd_num)) {
+      return(NA_real_)
+    }
+
+    se_sq <- (s1 ^ 2) / n1 + (ref_sd_num ^ 2) / n2
+    if (!is.finite(se_sq) || se_sq <= 0) {
+      return(NA_real_)
+    }
+
+    t_stat <- (mean(x_clean) - ref_mean_num) / sqrt(se_sq)
+
+    # Welch-Satterthwaite approximation for unequal variances.
+    df_num <- se_sq ^ 2
+    df_den <- ((s1 ^ 2) / n1) ^ 2 / (n1 - 1) + ((ref_sd_num ^ 2) / n2) ^ 2 / (n2 - 1)
+    if (!is.finite(df_den) || df_den <= 0) {
+      return(NA_real_)
+    }
+
+    df <- df_num / df_den
+    if (!is.finite(df) || df <= 0) {
+      return(NA_real_)
+    }
+
+    2 * stats::pt(-abs(t_stat), df = df)
+  }, error = function(e) {
+    NA_real_
+  })
+}
+
 summarize_scaled_scores <- function(scores) {
   x <- suppressWarnings(as.numeric(scores))
   x <- x[!is.na(x)]

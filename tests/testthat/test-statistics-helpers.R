@@ -43,3 +43,29 @@ test_that("build_statistics_bundle handles missing scaled scores", {
   expect_true(all(bundle$reliability$items == 2L))
   expect_equal(nrow(bundle$item_total), 2L)
 })
+
+test_that("calculate_ttest_pvalue_from_summary returns finite p-value", {
+  x <- c(10, 12, 14, 16, 18, 20)
+
+  p <- app_env$calculate_ttest_pvalue_from_summary(
+    x = x,
+    ref_mean = 15,
+    ref_sd = 4,
+    ref_n = 120
+  )
+
+  expect_true(is.finite(p))
+  expect_gte(p, 0)
+  expect_lte(p, 1)
+})
+
+test_that("calculate_ttest_pvalue_from_summary returns NA for invalid inputs", {
+  p <- app_env$calculate_ttest_pvalue_from_summary(
+    x = c(10),
+    ref_mean = 15,
+    ref_sd = 4,
+    ref_n = 120
+  )
+
+  expect_true(is.na(p))
+})
