@@ -119,7 +119,7 @@ mod_export_server <- function(id, data, likert_state, lang = NULL) {
       last_state <- last_export_notification_state()
 
       if (current_state && !isTRUE(last_state)) {
-        showNotification(tr("export.status.ready"), type = "message", duration = 3)
+        showNotification(tr("export.status.ready"), type = "message", duration = 15)
       }
 
       last_export_notification_state(current_state)

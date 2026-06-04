@@ -222,7 +222,7 @@ mod_data_input_server <- function(id, lang = NULL) {
       )
 
       if (is.null(parsed) || ncol(parsed) == 0) {
-        showNotification(tr("data_input.validation.parse_fail"), type = "error", duration = 5)
+        showNotification(tr("data_input.validation.parse_fail"), type = "error", duration = 15)
         return()
       }
 
@@ -250,7 +250,7 @@ mod_data_input_server <- function(id, lang = NULL) {
 
       ext <- tolower(tools::file_ext(input$upload_file$name))
       if (!ext %in% c("xlsx", "csv", "tsv", "txt")) {
-        showNotification(tr("data_input.validation.file_type"), type = "error", duration = 5)
+        showNotification(tr("data_input.validation.file_type"), type = "error", duration = 15)
         return()
       }
 
@@ -296,7 +296,7 @@ mod_data_input_server <- function(id, lang = NULL) {
           showNotification(
             tr("data_input.status.no_cols"),
             type = "warning",
-            duration = 5
+            duration = 15
           )
           no_cols_notification_shown(TRUE)
         }
@@ -317,7 +317,7 @@ mod_data_input_server <- function(id, lang = NULL) {
           tr("data_input.status.score_nonexact", n, paste(sel, collapse = ", "))
         }
 
-        showNotification(msg, type = "message", duration = 3)
+        showNotification(msg, type = "message", duration = 15)
       }
 
       last_notification_state(current_state)

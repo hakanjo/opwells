@@ -584,7 +584,9 @@ plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
         range = c(-5, 105),
         tickmode = "linear",
         dtick = 10,
-        showgrid = FALSE,
+        showgrid = TRUE,
+        gridcolor = "#ececec60",
+        gridwidth = 1,
         zeroline = FALSE
       ),
       yaxis = list(

@@ -145,19 +145,19 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
 
       label <- trimws(input$combined_group_label)
       if (!nzchar(label)) {
-        showNotification(tr("define_groups.notif.enter_name"), type = "warning")
+        showNotification(tr("define_groups.notif.enter_name"), type = "warning", duration = 15)
         return()
       }
 
       current_selections <- selected_group_selections()
       if (!length(current_selections)) {
-        showNotification(tr("define_groups.notif.select_at_least_one"), type = "warning")
+        showNotification(tr("define_groups.notif.select_at_least_one"), type = "warning", duration = 15)
         return()
       }
 
       source_defs <- plot_parse_group_definitions(current_selections)
       if (!length(source_defs)) {
-        showNotification(tr("define_groups.notif.create_failed"), type = "error")
+        showNotification(tr("define_groups.notif.create_failed"), type = "error", duration = 15)
         return()
       }
 
@@ -166,7 +166,7 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
       set_combined_groups(c(current_combined, list(combined_group)))
 
       updateTextInput(session, "combined_group_label", value = "")
-      showNotification(tr("define_groups.notif.created", label), type = "message")
+      showNotification(tr("define_groups.notif.created", label), type = "message", duration = 15)
     })
 
     created_observers <- reactiveVal(character(0))
@@ -224,7 +224,7 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
               if (length(idx) > 0) {
                 removed_label <- current_combined[[idx[1]]]$label
                 set_combined_groups(current_combined[-idx[1]])
-                showNotification(tr("define_groups.notif.removed", removed_label), type = "message")
+                showNotification(tr("define_groups.notif.removed", removed_label), type = "message", duration = 15)
               }
             }, ignoreInit = TRUE)
           })
