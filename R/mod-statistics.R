@@ -277,7 +277,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         return(data.frame())
       }
 
-      required_cols <- c("group", "mean", "median", "sd", "q_1_6", "q_5_6")
+      required_cols <- c("group", "mean", "sd", "q_1_6", "q_5_6")
       if (!all(required_cols %in% names(ref_df))) {
         return(data.frame())
       }
@@ -286,7 +286,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         category = trimws(as.character(ref_df$group)),
         n = NA_integer_,
         mean = suppressWarnings(as.numeric(ref_df$mean)),
-        median = suppressWarnings(as.numeric(ref_df$median)),
         sd = suppressWarnings(as.numeric(ref_df$sd)),
         range_low = suppressWarnings(as.numeric(ref_df$q_1_6)),
         range_high = suppressWarnings(as.numeric(ref_df$q_5_6)),
@@ -305,7 +304,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       out$mean <- format_num(out$mean)
-      out$median <- format_num(out$median)
       out$sd <- format_num(out$sd)
       out$range_low <- format_num(out$range_low)
       out$range_high <- format_num(out$range_high)
@@ -314,7 +312,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         tr("stats.summary.col.category"),
         tr("stats.summary.col.n"),
         tr("stats.summary.col.mean"),
-        tr("stats.summary.col.median"),
         tr("stats.summary.col.sd"),
         tr("stats.summary.col.range_low"),
         tr("stats.summary.col.range_high")
@@ -333,7 +330,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
           category = g,
           n = length(x),
           mean = mean(x),
-          median = stats::median(x),
           sd = stats::sd(x),
           range_low = as.numeric(stats::quantile(x, probs = 1 / 6, na.rm = TRUE, names = FALSE)),
           range_high = as.numeric(stats::quantile(x, probs = 5 / 6, na.rm = TRUE, names = FALSE)),
@@ -343,7 +339,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       out <- do.call(rbind, rows)
       out$mean <- format_num(out$mean)
-      out$median <- format_num(out$median)
       out$sd <- format_num(out$sd)
       out$range_low <- format_num(out$range_low)
       out$range_high <- format_num(out$range_high)
@@ -352,7 +347,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         tr("stats.summary.col.category"),
         tr("stats.summary.col.n"),
         tr("stats.summary.col.mean"),
-        tr("stats.summary.col.median"),
         tr("stats.summary.col.sd"),
         tr("stats.summary.col.range_low"),
         tr("stats.summary.col.range_high")
@@ -392,7 +386,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
             n1 = length(x1),
             n2 = length(x2),
             mean_diff = mean(x1) - mean(x2),
-            median_diff = stats::median(x1) - stats::median(x2),
             p_value = p_val,
             stringsAsFactors = FALSE
           )
@@ -418,7 +411,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
             n1 = length(x1),
             n2 = NA_integer_,
             mean_diff = mean(x1) - ref_row$mean[1],
-            median_diff = stats::median(x1) - ref_row$median[1],
             p_value = NA_real_,
             stringsAsFactors = FALSE
           )
@@ -434,7 +426,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       out <- do.call(rbind, rows)
       out$mean_diff <- format_num(out$mean_diff)
-      out$median_diff <- format_num(out$median_diff)
       out$p_value <- format_p_value(out$p_value)
 
       names(out) <- c(
@@ -443,7 +434,6 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         tr("stats.pairwise.col.n1"),
         tr("stats.pairwise.col.n2"),
         tr("stats.pairwise.col.mean_diff"),
-        tr("stats.pairwise.col.median_diff"),
         tr("stats.pairwise.col.p_value")
       )
 

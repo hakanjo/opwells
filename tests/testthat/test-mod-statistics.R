@@ -71,7 +71,6 @@ test_that("statistics module renders category summary and pairwise comparisons",
       pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
       expect_true(grepl("Grupp 1", pairwise_html, fixed = TRUE))
       expect_true(grepl("Skillnad i medel", pairwise_html, fixed = TRUE))
-      expect_true(grepl("Skillnad i median", pairwise_html, fixed = TRUE))
       expect_true(grepl("p-värde", pairwise_html, fixed = TRUE))
 
       # Same value label chosen in different columns should be disambiguated.
@@ -131,7 +130,6 @@ test_that("statistics module shows reference data when user data is missing", {
       group = c("Ref A", "Ref B"),
       mean = c(40, 60),
       sd = c(8, 12),
-      median = c(41, 59),
       `2_3_range` = c("", ""),
       q_1_6 = c(30, 50),
       q_5_6 = c(50, 70),
