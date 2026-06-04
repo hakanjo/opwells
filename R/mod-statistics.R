@@ -22,7 +22,11 @@ mod_statistics_ui <- function(id, lang = i18n_default_language) {
         downloadButton(ns("download_summary_xlsx"), tr("export.download_xlsx"))
       ),
       uiOutput(ns("summary_statistics_ui")),
-      uiOutput(ns("pairwise_section_ui"))
+      uiOutput(ns("pairwise_section_ui")),
+      div(
+        style = "margin-bottom: 10px;",
+        tr_md("stats.explanation")
+      ),
     )
   )
 }
@@ -31,6 +35,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
   moduleServer(id, function(input, output, session) {
     resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
     tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
+    tr_md <- function(key, ...) i18n_t_markdown(resolved_lang(), key, ...)
 
     ref_data <- reactive({
       load_ref_data()
