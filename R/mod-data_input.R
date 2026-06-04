@@ -8,9 +8,9 @@ mod_data_input_ui <- function(id, lang = i18n_default_language, left_extra_ui = 
       width = 3,
       tags$div(
         style = "margin-bottom: 12px;",
-        tr_md("data_input.help.template_prefix"),
-        downloadLink(ns("download_template"), tr_md("data_input.help.template_link")),
-        helpText(tr_md("data_input.help")),
+        helpText(tr_md("data_input.help"),
+        tr("data_input.help.template_prefix"),
+        downloadLink(ns("download_template"), tr("data_input.help.template_link"))),
         hr()
       ),
       fileInput(
