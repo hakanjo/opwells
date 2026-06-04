@@ -7,6 +7,7 @@ sv:
   app.tab.statistics: Statistiska jämförelser
   about.description: |-
     - OPWELLS är en enkät baserad på 10 frågor för att mäta äldres välbefinnande. OPWELLS är en förkortning för enkätens engelska benämning, *Older Persons Wellbeing Scale*.
+    - Måttet på de äldres välbefinnande är estimerat utifrån deras svar på enkäten och presenteras på en 0–100 skala, där 0 innebär lägst välbefinnande och 100 innebär högst välbefinnande.
     - I denna webbapplikation kan du ta fram mått på välbefinnande utifrån individers enkätsvar.
     - Du kan även illustrera skillnader mellan grupper och göra statistiska jämförelser inom dina data samt jämföra deras svar mot en referenspopulation*.
     - Under "Ladda upp data" kan du ladda upp dina enkätsvar tillsammans med ytterligare variabler som du vill kunna göra jämförelser för. Använd gärna mallen som finns där för att se hur dina data ska vara strukturerade.
@@ -14,18 +15,17 @@ sv:
 
     \**Referensgruppen består av de (anonyma) personerna som deltog i utvecklingen av OPWELLS. De kommer från nio svenska projektparts- och samverkanskommuner.*
   
+  data_input.help.template_prefix: '**Använd gärna denna mall för uppladdning av data:**'
+  data_input.help.template_link: '**mall (.xlsx)**'
   data_input.help: |-
     Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).
-    
-    Din fil för uppladdning måste innehålla en kolumn för varje OPWELLS-fråga.
-    
-    Namnen på kolumnerna måste följa formatet OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2 etc.
 
-    Utöver svaren kan du inkludera ytterligare kolumner där varje kolumn representerar en variabel.
+    Din fil för uppladdning måste innehålla en person per rad med svar på respektive OPWELLS fråga skriven med siffrorna Aldrig = 0, Sällan = 1, Ibland = 2, Ofta = 3 respektive Alltid = 4. Namnen på kolumnerna för respektive fråga måste följa formatet OPWELLS_1, OPWELLS_2, OPWELLS_3, etc.
+
+    Utöver svaren kan du lägga till ytterligare kolumner med andra variabler som du har i dina data och du vill göra jämförelser med. Du kan exempelvis lägga in variabler så som kön eller åldersgrupp. (I mallen är dessa kolumner inkluderade. Om du inte har dessa variabler i dina data så raderar du kolumnerna.) 
     
     *Tänk på att inte ladda upp personuppgifter.*
-  data_input.help.template_prefix: 'Använd gärna denna mall för uppladdning av data:'
-  data_input.help.template_link: mall (.xlsx)
+
   data_input.upload.label: 'Ladda upp data'
   data_input.delimiter.label: Avgränsare
   data_input.delimiter.auto: Automatisk
@@ -38,7 +38,7 @@ sv:
   data_input.status.score_exact: 'OPWELLS-mått beräknat från %d kolumner: %s.'
   data_input.status.score_nonexact: 'OPWELLS-mått beräknat från %d kolumner (exakt 10 rekommenderas): %s.'
   export.title: Exportera OPWELLS-mått
-  export.help: Ladda ner dina data med en ny kolumn ('OPWELLS-mått') beräknad från dina data.
+  export.help: Ladda ner dina data med en ny kolumn för måttet på äldres välbefinnande ('OPWELLS-mått') beräknad från dina data. Måttet är estimerat utifrån deras svar på enkäten och presenteras på en 0–100 skala, där 0 innebär lägst välbefinnande och 100 innebär högst välbefinnande.
   export.download_csv: Ladda ner (.csv)
   export.download_xlsx: Ladda ner (.xlsx)
   export.column.scaled_score: OPWELLS-mått
@@ -64,12 +64,10 @@ sv:
   define_groups.defined_groups: Definierade grupper
 
   plot.help: |-
-    Illustrera skillnader i välbefinnande mellan grupper.
+    Illustrera skillnader i välbefinnande mellan grupper. Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata. 
     
-    Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata. Håll muspekaren över punkterna för detaljer.
-
-    Markören visar gruppens medelvärde, linjen visar spannet som täcker ⅔ av svaren.
-
+    Markören visar gruppens medelvärde, linjen visar spannet som täcker ⅔ centrerat av svaren. Håll muspekaren över punkterna för detaljer.
+   
     Du kan spara en illustration med ikonerna uppe till höger i diagrammet.
   plot.load_data_for_groups: Ladda data för att välja grupper.
   plot.hover.no_valid: <b>%s</b><br>Inga giltiga OPWELLS-mått
@@ -97,31 +95,33 @@ sv:
     
     Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata.
 
-    För varje kategori visas medel, median, standardavvikelse (SD) och intervallet som täcker ⅔ av svaren.
+    För varje kategori visas medel, standardavvikelse (SD) och intervallet som täcker ⅔ av svaren.
   stats.summary_title: Statistik per kategori
   stats.pairwise_title: Parvisa jämförelser mellan grupper
   stats.load_data_for_groups: Ladda data för att välja grupper.
   stats.reference_groups: Välj referensgrupper
   stats.table.no_data: Ingen statistik tillgänglig.
-  stats.summary.col.category: Kategori
+  stats.summary.col.category: Variabel
   stats.summary.col.n: Antal
   stats.summary.col.mean: Medel
-  stats.summary.col.median: Median
-  stats.summary.col.sd: SD
-  stats.summary.col.range_low: 2/3 nedre
-  stats.summary.col.range_high: 2/3 övre
+  stats.summary.col.sd: Standardavvikelse
+  stats.summary.col.range_low: 2/3 nedre gränsvärde
+  stats.summary.col.range_high: 2/3 övre gränsvärde
   stats.pairwise.col.group1: Grupp 1
   stats.pairwise.col.group2: Grupp 2
-  stats.pairwise.col.n1: N1
-  stats.pairwise.col.n2: N2
+  stats.pairwise.col.n1: Antal i grupp 1
+  stats.pairwise.col.n2: Antal i grupp 2
   stats.pairwise.col.mean_diff: Medelskillnad
-  stats.pairwise.col.median_diff: Medianskillnad
   stats.pairwise.col.p_value: p-värde (t-test)
   stats.notif.no_data: Ingen användardata laddad. Ladda data i fliken "Ladda upp data" för att visa jämförelser.
   stats.summary.no_scores: OPWELLS saknas.
   stats.download.no_summary_data: Ingen deskriptiv statistik att exportera.
   stats.download.no_pairwise_data: Inga parvisa jämförelser att exportera.
   stats.include_total: Inkludera total
+  stats.explanation: |-
+    Måttet på de äldres välbefinnande är estimerat utifrån deras svar på enkäten och presenteras på en 0–100 skala, där 0 innebär lägst välbefinnande och 100 innebär högst välbefinnande.
+    
+    Referensgruppen består av de anonyma personer som deltog i utvecklingen av OPWELLS. Deltagarna rekryterades från nio svenska projekt- och samverkanskommuner. Cirka 20 % rekryterades via hemtjänsten, 20 % via seniororganisationer och 10 % via öppna verksamheter. Resterande 50 % rekryterades genom en kombination av dessa verksamheter. Totalt inkluderades data från 1 882 personer. Av dessa var 70 % kvinnor och 30 % män, 40 % 79 år eller yngre och 60 % 80 år eller äldre, och 88 % födda i Sverige och 12 % födda utanför Sverige.
 
 en:
   app.title: Older Persons' Wellbeing - OPWELLS
@@ -133,26 +133,25 @@ en:
 
   about.description: |-
     - OPWELLS is a questionnaire based on 10 questions for measuring older persons' wellbeing. OPWELLS is an abbreviation of the questionnaire's English name, *Older Persons Wellbeing Scale*.
+    - The measure of older persons' wellbeing is estimated based on their responses to the questionnaire and is presented on a 0–100 scale, where 0 indicates the lowest wellbeing and 100 indicates the highest wellbeing.
     - In this web application, you can calculate measures of wellbeing based on individuals' questionnaire responses.
     - You can also illustrate differences between groups and make statistical comparisons within your data, as well as compare their responses against a reference population*.
     - Under "Upload data", you can upload your questionnaire responses together with additional variables that you want to use for comparisons. Feel free to use the template provided there to see how your data should be structured.
     - OPWELLS was developed within the project "Measurement of older persons' wellbeing" and was funded by the [Familjen Kamprads Stiftelse 🔗](https://familjenkampradsstiftelse.se). If you have questions about OPWELLS, you can [read more here 🔗](#) or contact [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
 
     \**The reference group consists of the anonymous individuals who participated in the development of OPWELLS. They come from nine Swedish project partner and collaboration municipalities.*
-
+    
+  data_input.help.template_prefix: '**Feel free to use this template for uploading data:**'
+  data_input.help.template_link: '**template (.xlsx)**'
   data_input.help: |-
     Upload a data file (.xlsx, .csv, .tsv, or .txt).
-    
-    Your upload file must contain one column for each OPWELLS question.
-    
-    The column names must follow the format OPWELLS_1/F_1/Q_1, OPWELLS_2/F_2/Q_2, etc.
 
-    In addition to the responses, you can include additional columns where each column represents a variable.
+    Your file  for upload must contain one row per person with responses to each OPWELLS question written as the numbers Never = 0, Rarely = 1, Sometimes = 2, Often = 3, and Always = 4. The column names for each question must follow the format OPWELLS_1, OPWELLS_2, OPWELLS_3, etc.
+
+    In addition to the responses, you can include additional columns with other variables that you have in your data and want to use for comparisons. You can, for example, include variables such as gender or age group. (In the template, these columns are included. If you do not have these variables in your data, you can delete the columns.) 
     
     *Remember not to upload personal data.*
 
-  data_input.help.template_prefix: 'Feel free to use this template for uploading data:'
-  data_input.help.template_link: template (.xlsx)
   data_input.upload.label: 'Upload data'
   data_input.delimiter.label: Delimiter
   data_input.delimiter.auto: Automatic
@@ -166,7 +165,7 @@ en:
   data_input.status.score_nonexact: 'OPWELLS measure calculated from %d columns (exactly 10 recommended): %s.'
 
   export.title: Export OPWELLS measure
-  export.help: Download your data with a new column ('OPWELLS measure') calculated from your data.
+  export.help: Download your data with a new column for the measure of older persons' wellbeing ('OPWELLS measure') calculated from your data. The measure is estimated based on their responses to the questionnaire and is presented on a 0–100 scale, where 0 indicates the lowest wellbeing and 100 indicates the highest wellbeing.
   export.download_csv: Download results table (.csv)
   export.download_xlsx: Download results table (.xlsx)
   export.column.scaled_score: OPWELLS measure
@@ -191,11 +190,9 @@ en:
   define_groups.defined_groups: Defined groups
 
   plot.help: |-
-    Illustrate differences in wellbeing between groups.
-    
-    Select one or more groups in one or more columns. When no groups are selected, reference data are shown. Hover over the points for details.
+    Illustrate differences in wellbeing between groups. Select one or more groups in one or more columns. When no groups are selected, reference data are shown.
 
-    The marker shows the group mean, and the line shows the range that covers ⅔ of the responses.
+    The marker shows the group mean, and the line shows the range that covers the central ⅔ of the responses. Hover over the points for details.
 
     You can save an illustration with the icons at the top right of the plot.
   plot.load_data_for_groups: Upload data to select groups.
@@ -224,7 +221,7 @@ en:
     
     Select one or more groups in one or more columns. When no groups are selected, reference data are shown.
 
-    For each category, the mean, median, standard deviation (SD), and the range that covers ⅔ of the responses are shown.
+    For each category, the mean, standard deviation (SD), and the range that covers ⅔ of the responses are shown.
 
   stats.summary_title: Statistics by category
   stats.pairwise_title: Pairwise comparisons between groups
@@ -234,7 +231,6 @@ en:
   stats.summary.col.category: Category
   stats.summary.col.n: Count
   stats.summary.col.mean: Mean
-  stats.summary.col.median: Median
   stats.summary.col.sd: SD
   stats.summary.col.range_low: 2/3 lower
   stats.summary.col.range_high: 2/3 upper
@@ -243,10 +239,13 @@ en:
   stats.pairwise.col.n1: N1
   stats.pairwise.col.n2: N2
   stats.pairwise.col.mean_diff: Mean difference
-  stats.pairwise.col.median_diff: Median difference
   stats.pairwise.col.p_value: p-value (t-test)
   stats.notif.no_data: No user data uploaded. Upload data in the "Upload data" tab to display comparisons.
   stats.summary.no_scores: OPWELLS is missing.
   stats.download.no_summary_data: No descriptive statistics to export.
   stats.download.no_pairwise_data: No pairwise comparisons to export.
   stats.include_total: Include total
+  stats.explanation: |-
+    The measure of older persons' wellbeing is estimated based on their responses to the questionnaire and is presented on a 0–100 scale, where 0 indicates the lowest wellbeing and 100 indicates the highest wellbeing.
+
+    The reference group consists of the anonymous individuals who participated in the development of OPWELLS. They come from nine Swedish project partner and collaboration municipalities. Approximately 20% were recruited via home care services, 20% via senior organizations, and 10% via open activities. The remaining 50% were recruited through a combination of these activities. In total, data from 1,882 individuals were included. Of these were 70% women and 30% men, 40% were 79 years or younger and 60% were 80 years or older, and 88% were born in Sweden and 12% were born outside of Sweden.
