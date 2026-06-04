@@ -13,7 +13,7 @@ load_ref_data <- function() {
   population <- readxl::read_excel(
     ref_path,
     col_names = c(
-      "group", "mean", "sd", "median", "2_3_range", "q_1_6", "q_5_6"
+      "group", "mean", "sd", "median", "2_3_range", "q_1_6", "q_5_6", "n"
     ),
     skip = 1
   )

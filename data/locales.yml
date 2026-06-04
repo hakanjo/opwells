@@ -20,7 +20,14 @@ sv:
   data_input.help: |-
     Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).
 
-    Din fil för uppladdning måste innehålla en person per rad med svar på respektive OPWELLS fråga skriven med siffrorna Aldrig = 0, Sällan = 1, Ibland = 2, Ofta = 3 respektive Alltid = 4. Namnen på kolumnerna för respektive fråga måste följa formatet OPWELLS_1, OPWELLS_2, OPWELLS_3, etc.
+    Din fil för uppladdning måste innehålla en person per rad med svar på respektive OPWELLS fråga skriven med siffrorna
+    - Aldrig = 0
+    - Sällan = 1
+    - Ibland = 2
+    - Ofta = 3
+    - Alltid = 4
+    
+    Namnen på kolumnerna för respektive fråga måste följa formatet OPWELLS_1, OPWELLS_2, OPWELLS_3, etc.
 
     Utöver svaren kan du lägga till ytterligare kolumner med andra variabler som du har i dina data och du vill göra jämförelser med. Du kan exempelvis lägga in variabler så som kön eller åldersgrupp. (I mallen är dessa kolumner inkluderade. Om du inte har dessa variabler i dina data så raderar du kolumnerna.) 
     
