@@ -57,11 +57,14 @@ test_that("define groups module can add and remove combined groups in shared sta
       session$setInputs(add_combined_group = 1)
       session$flushReact()
 
+      combined_groups_html <- paste(as.character(output$combined_groups_list), collapse = "")
+
       expect_length(shared_group_state$combined_groups, 1L)
       expect_equal(shared_group_state$combined_groups[[1]]$label, "Grupp A")
       expect_true(isTRUE(shared_group_state$combined_groups[[1]]$is_combined))
       expect_equal(shared_group_state$combined_groups[[1]]$source_defs[[1]]$col, "grp")
       expect_equal(shared_group_state$combined_groups[[1]]$source_defs[[1]]$value, "A")
+      expect_true(grepl("Grupp A (Antal: 2)", combined_groups_html, fixed = TRUE))
 
       session$setInputs(remove_combined_group_Grupp_A = 1)
       session$flushReact()

@@ -169,6 +169,15 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
       showNotification(tr("define_groups.notif.created", label), type = "message", duration = 15)
     })
 
+    combined_group_participant_count <- function(group_def) {
+      user_df <- user_data()
+      if (!is.data.frame(user_df) || nrow(user_df) == 0 || !is.list(group_def)) {
+        return(0L)
+      }
+
+      length(plot_get_group_indices(user_df, group_def))
+    }
+
     created_observers <- reactiveVal(character(0))
 
     output$combined_groups_list <- renderUI({
@@ -183,11 +192,13 @@ mod_define_groups_server <- function(id, data = NULL, likert_state = NULL, group
         lapply(seq_along(combined), function(i) {
           group <- combined[[i]]
           label <- group$label
+          participant_count <- combined_group_participant_count(group)
+          count_label <- tr("stats.summary.col.n")
           safe_id <- gsub("[^a-zA-Z0-9_]", "_", label)
 
           tags$div(
             style = "background-color: #f5f5f5; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;",
-            tags$span(label),
+            tags$span(sprintf("%s (%s: %d)", label, count_label, participant_count)),
             actionButton(
               ns(paste0("remove_combined_group_", safe_id)),
               tr("define_groups.remove"),

@@ -70,6 +70,14 @@ sv:
   define_groups.notif.removed: Grupp '%s' borttagen.
   define_groups.defined_groups: Definierade grupper
 
+  ref_group.total: Totalt (ref.)
+  ref_group.men: Män (ref.)
+  ref_group.women: Kvinnor (ref.)
+  ref_group.under_80: 79 år och yngre (ref.)
+  ref_group.over_80: 80 år och äldre (ref.)
+  ref_group.born_in_sweden: Född i Sverige (ref.)
+  ref_group.born_outside_sweden: Född utanför Sverige (ref.)
+
   plot.help: |-
     Illustrera skillnader i välbefinnande mellan grupper. Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata. 
     
