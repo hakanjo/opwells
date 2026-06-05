@@ -72,12 +72,12 @@ plot_column_groups <- function(user_df, exclude_cols = character(0)) {
   result
 }
 
-plot_reference_group_choices <- function(ref_df) {
+plot_reference_group_choices <- function(ref_df, lang = i18n_default_language) {
   if (!is.data.frame(ref_df) || nrow(ref_df) == 0 || !("group" %in% names(ref_df))) {
     return(character(0))
   }
 
-  sort(unique(plot_trim_non_empty(ref_df$group)))
+  sort(unique(plot_trim_non_empty(i18n_reference_group_labels(ref_df$group, lang = lang))))
 }
 
 plot_sanitize_group_selections <- function(selections, col_groups) {
@@ -342,7 +342,7 @@ plot_build_reference_data <- function(ref_df, selected_groups, lang = i18n_defau
     return(data.frame())
   }
 
-  ref_df$group_label <- trimws(as.character(ref_df$group))
+  ref_df$group_label <- i18n_reference_group_labels(ref_df$group, lang = lang)
   ref_df <- ref_df[!is.na(ref_df$group_label) & nzchar(ref_df$group_label), , drop = FALSE]
   if (!length(selected_groups)) {
     selected_groups <- unique(ref_df$group_label)
@@ -787,7 +787,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         combined_groups_for_choices()
       )
     })
-    ref_group_choices <- reactive(plot_reference_group_choices(ref_data()))
+    ref_group_choices <- reactive(plot_reference_group_choices(ref_data(), lang = resolved_lang()))
 
     group_controller <- group_selection_controller(
       input = input,

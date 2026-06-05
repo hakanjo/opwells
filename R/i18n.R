@@ -58,6 +58,32 @@ i18n_load_locales <- function(path = i18n_locale_path) {
 
 i18n_locales <- i18n_load_locales()
 
+i18n_reference_group_key_map <- function() {
+  sv_locale <- i18n_locales[["sv"]]
+  keys <- names(sv_locale)[startsWith(names(sv_locale), "ref_group.")]
+  values <- trimws(as.character(sv_locale[keys]))
+  stats::setNames(keys, values)
+}
+
+i18n_reference_group_labels <- function(labels, lang = i18n_default_language) {
+  labels <- trimws(as.character(labels))
+  if (!length(labels)) {
+    return(character(0))
+  }
+
+  key_map <- i18n_reference_group_key_map()
+  mapped_keys <- unname(key_map[labels])
+
+  vapply(seq_along(labels), function(idx) {
+    key <- mapped_keys[[idx]]
+    if (is.na(key) || !nzchar(key)) {
+      return(labels[[idx]])
+    }
+
+    i18n_t(lang, key)
+  }, character(1))
+}
+
 i18n_normalize_language <- function(lang) {
   if (!is.character(lang) || !length(lang) || is.na(lang)) {
     return(i18n_default_language)

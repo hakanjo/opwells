@@ -230,6 +230,14 @@ en:
   plot.total_label: Total
   plot.show_raw: Show individual data points
 
+  ref_group.total: Total (ref.)
+  ref_group.men: Men (ref.)
+  ref_group.women: Women (ref.)
+  ref_group.under_80: 79 years or younger (ref.)
+  ref_group.over_80: 80 years or older (ref.)
+  ref_group.born_in_sweden: Born in Sweden (ref.)
+  ref_group.born_outside_sweden: Born outside Sweden (ref.)
+
   stats.title: Statistical comparisons for user data
   stats.help: |-
     Summarize differences in wellbeing between groups.

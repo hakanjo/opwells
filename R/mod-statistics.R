@@ -74,7 +74,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       )
     })
 
-    ref_group_choices <- reactive(plot_reference_group_choices(ref_data()))
+    ref_group_choices <- reactive(plot_reference_group_choices(ref_data(), lang = resolved_lang()))
 
     group_controller <- group_selection_controller(
       input = input,
@@ -288,7 +288,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       out <- data.frame(
-        category = trimws(as.character(ref_df$group)),
+        category = i18n_reference_group_labels(ref_df$group, lang = resolved_lang()),
         n = suppressWarnings(as.integer(round(as.numeric(ref_df$n)))),
         mean = suppressWarnings(as.numeric(ref_df$mean)),
         sd = suppressWarnings(as.numeric(ref_df$sd)),

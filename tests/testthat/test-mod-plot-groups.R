@@ -122,6 +122,32 @@ test_that("plot_build_combined_payload assembles user, raw, and reference layers
   expect_match(payload$user_raw$hover_text[1], "Rad: 2")
 })
 
+test_that("plot reference groups are localized from locale labels", {
+  mod_env <- make_mod_plot_env()
+
+  ref_df <- data.frame(
+    group = c("Totalt (ref.)", "Män (ref.)", "Kvinnor (ref.)"),
+    mean = c(50, 55, 60),
+    sd = c(8, 9, 10),
+    q_1_6 = c(42, 47, 52),
+    q_5_6 = c(58, 63, 68),
+    stringsAsFactors = FALSE
+  )
+
+  expect_equal(
+    mod_env$plot_reference_group_choices(ref_df, lang = "en"),
+    c("Men (ref.)", "Total (ref.)", "Women (ref.)")
+  )
+
+  translated <- mod_env$plot_build_reference_data(
+    ref_df = ref_df,
+    selected_groups = c("Total (ref.)", "Men (ref.)"),
+    lang = "en"
+  )
+
+  expect_equal(translated$group_label, c("Total (ref.)", "Men (ref.)"))
+})
+
 test_that("plot_build_user_data can include a total user row", {
   mod_env <- make_mod_plot_env()
 
