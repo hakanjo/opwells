@@ -454,12 +454,18 @@ plot_group_jitter <- function(n) {
   seq(-0.18, 0.18, length.out = n)
 }
 
-plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
+plot_present_groups <- function(payload) {
   present_groups <- payload$ordered_groups[payload$ordered_groups %in% unique(c(
     payload$user_summary$group_label,
     payload$ref_summary$group_label,
     payload$user_raw$group_label
   ))]
+
+  present_groups[!is.na(present_groups) & nzchar(present_groups)]
+}
+
+plot_build_plotly_figure <- function(payload, lang = i18n_default_language) {
+  present_groups <- plot_present_groups(payload)
 
   if (!length(present_groups)) {
     return(plot_build_empty_figure(i18n_t(lang, "plot.empty.no_data")))
@@ -696,7 +702,7 @@ mod_plot_ui <- function(id, lang = i18n_default_language) {
       ),
       column(
         width = 9,
-        plotly::plotlyOutput(ns("comparison_plot"), height = "68vh")
+        uiOutput(ns("comparison_plot_container"))
       )
     )
   )
@@ -914,6 +920,26 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         layers = plot_layers(),
         selected_reference_groups = current_reference_groups(),
         lang = resolved_lang()
+      )
+    })
+
+    plot_output_height <- reactive({
+      payload <- plot_payload()
+      group_count <- length(plot_present_groups(payload))
+      has_raw <- nrow(payload$user_raw) > 0
+
+      base_height <- 360
+      per_group_px <- if (has_raw) 72 else 58
+      computed_height <- base_height + (group_count * per_group_px)
+      clamped_height <- max(420, min(1200, computed_height))
+
+      paste0(clamped_height, "px")
+    })
+
+    output$comparison_plot_container <- renderUI({
+      plotly::plotlyOutput(
+        session$ns("comparison_plot"),
+        height = plot_output_height()
       )
     })
 
