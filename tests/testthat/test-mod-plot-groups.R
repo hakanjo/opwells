@@ -342,7 +342,7 @@ test_that("plot_get_group_indices retrieves indices for total group", {
   expect_equal(idx, c(1L, 2L, 3L))
 })
 
-test_that("plot_get_group_indices retrieves indices for combined groups using OR logic", {
+test_that("plot_get_group_indices retrieves indices for combined groups using AND logic", {
   mod_env <- make_mod_plot_env()
 
   user_df <- data.frame(
@@ -356,12 +356,12 @@ test_that("plot_get_group_indices retrieves indices for combined groups using OR
     list(col = "year", value = "2024", label = "2024", is_total = FALSE)
   )
 
-  combined <- mod_env$plot_create_combined_group(source_defs, "Women or 2024")
+  combined <- mod_env$plot_create_combined_group(source_defs, "Women and 2024")
   idx <- mod_env$plot_get_group_indices(user_df, combined)
 
-  # Should match: (sex == Kvinna) OR (year == 2024)
-  # Rows: 1(Kvinna,2024), 2(Kvinna,2025), 3(Man,2024) = indices 1, 2, 3
-  expect_equal(sort(idx), c(1L, 2L, 3L))
+  # Should match: (sex == Kvinna) AND (year == 2024)
+  # Row: 1(Kvinna,2024) = index 1
+  expect_equal(sort(idx), c(1L))
 })
 
 test_that("plot_build_user_data works with combined groups", {
@@ -380,7 +380,7 @@ test_that("plot_build_user_data works with combined groups", {
     list(col = "year", value = "2024", label = "2024", is_total = FALSE)
   )
 
-  combined <- mod_env$plot_create_combined_group(source_defs, "Women or 2024")
+  combined <- mod_env$plot_create_combined_group(source_defs, "Women and 2024")
 
   user_data <- mod_env$plot_build_user_data(
     user_df = user_df,
@@ -389,9 +389,9 @@ test_that("plot_build_user_data works with combined groups", {
   )
 
   expect_equal(nrow(user_data$summary), 1L)
-  expect_equal(user_data$summary$group_label[1], "Women or 2024")
-  expect_equal(user_data$summary$n[1], 4L) # Rows 1, 2, 3, 5
-  expect_equal(nrow(user_data$raw), 4L)
+  expect_equal(user_data$summary$group_label[1], "Women and 2024")
+  expect_equal(user_data$summary$n[1], 2L) # Rows 1, 5
+  expect_equal(nrow(user_data$raw), 2L)
 })
 
 test_that("plot_build_user_data combines simple and combined groups", {
@@ -442,7 +442,7 @@ test_that("plot_build_combined_payload includes combined groups", {
     list(col = "year", value = "2024", label = "2024", is_total = FALSE)
   )
 
-  combined <- mod_env$plot_create_combined_group(source_defs, "Women or 2024")
+  combined <- mod_env$plot_create_combined_group(source_defs, "Women and 2024")
 
   payload <- mod_env$plot_build_combined_payload(
     user_df = user_df,
@@ -452,8 +452,50 @@ test_that("plot_build_combined_payload includes combined groups", {
     layers = "user"
   )
 
-  expect_equal(payload$ordered_groups, c("Women or 2024"))
+  expect_equal(payload$ordered_groups, c("Women and 2024"))
   expect_equal(nrow(payload$user_summary), 1L)
+})
+
+test_that("plot_get_group_indices uses OR within column and AND across columns", {
+  mod_env <- make_mod_plot_env()
+
+  user_df <- data.frame(
+    sex = c("Kvinna", "Kvinna", "Man", "Man"),
+    year = c("2024", "2025", "2024", "2025"),
+    stringsAsFactors = FALSE
+  )
+
+  source_defs <- list(
+    list(col = "sex", value = "Kvinna", label = "Kvinna", is_total = FALSE),
+    list(col = "sex", value = "Man", label = "Man", is_total = FALSE),
+    list(col = "year", value = "2024", label = "2024", is_total = FALSE)
+  )
+
+  combined <- mod_env$plot_create_combined_group(source_defs, "Any sex and 2024")
+  idx <- mod_env$plot_get_group_indices(user_df, combined)
+
+  # (sex in {Kvinna, Man}) AND (year == 2024) => rows 1 and 3
+  expect_equal(sort(idx), c(1L, 3L))
+})
+
+test_that("plot_get_group_indices returns empty for impossible AND intersection", {
+  mod_env <- make_mod_plot_env()
+
+  user_df <- data.frame(
+    sex = c("Kvinna", "Man"),
+    year = c("2024", "2024"),
+    stringsAsFactors = FALSE
+  )
+
+  source_defs <- list(
+    list(col = "sex", value = "Kvinna", label = "Kvinna", is_total = FALSE),
+    list(col = "year", value = "2030", label = "2030", is_total = FALSE)
+  )
+
+  combined <- mod_env$plot_create_combined_group(source_defs, "Women and 2030")
+  idx <- mod_env$plot_get_group_indices(user_df, combined)
+
+  expect_equal(idx, integer(0))
 })
 
 test_that("plot_build_combined_payload orders combined groups with basic groups", {

@@ -226,10 +226,33 @@ plot_get_group_indices <- function(user_df, group_def) {
   }
 
   if (isTRUE(group_def$is_combined)) {
-    idx_list <- lapply(group_def$source_defs, function(src_def) {
-      plot_get_group_indices(user_df, src_def)
+    source_defs <- group_def$source_defs
+    if (!is.list(source_defs) || !length(source_defs)) {
+      return(integer(0))
+    }
+
+    valid_source_defs <- Filter(function(src_def) {
+      is.list(src_def) && !is.null(src_def$col) && nzchar(trimws(as.character(src_def$col)))
+    }, source_defs)
+
+    if (!length(valid_source_defs)) {
+      return(integer(0))
+    }
+
+    source_cols <- vapply(valid_source_defs, function(src_def) as.character(src_def$col), character(1))
+    defs_by_col <- split(valid_source_defs, source_cols)
+
+    # OR within each column, then AND across columns.
+    idx_by_col <- lapply(defs_by_col, function(col_defs) {
+      idx_for_col <- lapply(col_defs, function(src_def) {
+        plot_get_group_indices(user_df, src_def)
+      })
+
+      sort(unique(unlist(idx_for_col)))
     })
-    return(sort(unique(unlist(idx_list))))
+
+    combined_idx <- Reduce(intersect, idx_by_col)
+    return(sort(unique(combined_idx)))
   }
 
   col <- group_def$col
