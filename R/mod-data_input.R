@@ -165,9 +165,7 @@ mod_data_input_server <- function(id, lang = NULL) {
 
     auto_select_cols <- function(cols) {
       cols[
-        grepl("^OPWELLS", cols, ignore.case = TRUE) |
-        grepl("F(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE) |
-        grepl("Q(?:10|[1-9])(?![0-9])", cols, ignore.case = TRUE, perl = TRUE)
+        grepl("^(?:OPWELLS|F|Q)_?[0-9]+$", cols, ignore.case = TRUE, perl = TRUE)
       ]
     }
 
