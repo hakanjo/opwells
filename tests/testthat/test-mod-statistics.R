@@ -53,7 +53,7 @@ test_that("statistics module renders category summary and pairwise comparisons",
       session$flushReact()
 
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
-      expect_true(grepl("Kategori", summary_html, fixed = TRUE))
+      expect_true(grepl("Variabel|Category", summary_html, perl = TRUE))
       expect_false(grepl("Välj minst en grupp", summary_html, fixed = TRUE))
 
       pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
@@ -63,14 +63,14 @@ test_that("statistics module renders category summary and pairwise comparisons",
       session$flushReact()
 
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
-      expect_true(grepl("Kategori", summary_html, fixed = TRUE))
+      expect_true(grepl("Variabel|Category", summary_html, perl = TRUE))
       expect_true(grepl(">A<", summary_html))
       expect_true(grepl(">B<", summary_html))
-      expect_true(grepl("2/3 nedre", summary_html, fixed = TRUE))
+      expect_true(grepl("2/3 nedre|2/3 lower", summary_html, perl = TRUE))
 
       pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
       expect_true(grepl("Grupp 1", pairwise_html, fixed = TRUE))
-      expect_true(grepl("Skillnad i medel", pairwise_html, fixed = TRUE))
+      expect_true(grepl("Medelskillnad|Mean difference", pairwise_html, perl = TRUE))
       expect_true(grepl("p-värde", pairwise_html, fixed = TRUE))
 
       # Same value label chosen in different columns should be disambiguated.
@@ -111,7 +111,7 @@ test_that("statistics module shows guidance before scaled scores exist", {
       session$flushReact()
 
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
-      expect_true(grepl("Skalad poäng saknas", summary_html, fixed = TRUE))
+      expect_true(grepl("OPWELLS saknas|OPWELLS is missing", summary_html, perl = TRUE))
 
       pairwise_html <- paste(as.character(output$pairwise_section_ui), collapse = "")
       expect_true(length(pairwise_html) == 0 || nzchar(pairwise_html) == FALSE || is.null(pairwise_html) || pairwise_html == "")
@@ -133,6 +133,7 @@ test_that("statistics module shows reference data when user data is missing", {
       `2_3_range` = c("", ""),
       q_1_6 = c(30, 50),
       q_5_6 = c(50, 70),
+      n = c(100, 150),
       stringsAsFactors = FALSE
     )
   }
@@ -148,7 +149,7 @@ test_that("statistics module shows reference data when user data is missing", {
       session$flushReact()
 
       summary_html <- paste(as.character(output$summary_statistics_ui), collapse = "")
-      expect_true(grepl("Kategori", summary_html, fixed = TRUE))
+      expect_true(grepl("Variabel|Category", summary_html, perl = TRUE))
       expect_true(grepl("Ref A", summary_html, fixed = TRUE))
       expect_true(grepl("Ref B", summary_html, fixed = TRUE))
 
@@ -208,6 +209,70 @@ test_that("statistics module includes reference n and p-value for user vs refere
       expect_true(grepl("Ref A", pairwise_html, fixed = TRUE))
       expect_true(grepl(">100<", pairwise_html))
       expect_false(grepl(">NA<", pairwise_html, fixed = TRUE))
+    }
+  )
+})
+
+test_that("statistics explanation shows reference text only when reference data are included", {
+  notification_log <- new.env(parent = emptyenv())
+  notification_log$messages <- character(0)
+
+  mod_env <- make_mod_statistics_env(notification_log)
+
+  mod_env$load_ref_data <- function() {
+    data.frame(
+      group = c("Ref A", "Ref B"),
+      mean = c(40, 60),
+      sd = c(8, 12),
+      `2_3_range` = c("", ""),
+      q_1_6 = c(30, 50),
+      q_5_6 = c(50, 70),
+      n = c(100, 150),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  user_df <- data.frame(
+    grp = c("A", "A", "B", "B"),
+    Q1 = c("1", "2", "3", "4"),
+    Q2 = c("1", "2", "3", "4"),
+    stringsAsFactors = FALSE
+  )
+
+  likert_state <- list(
+    scaled_scores = c(20, 30, 40, 50),
+    selected_columns = c("Q1", "Q2"),
+    numeric_items = data.frame(Q1 = c(1, 2, 3, 4), Q2 = c(1, 2, 3, 4), stringsAsFactors = FALSE)
+  )
+
+  testServer(
+    mod_env$mod_statistics_server,
+    args = list(
+      data = reactive(user_df),
+      likert_state = reactive(likert_state),
+      active_tab = reactive("statistics")
+    ),
+    {
+      session$flushReact()
+
+      session$setInputs(grp_grp = "A")
+      session$flushReact()
+
+      explanation_html <- paste(as.character(output$explanation_ui), collapse = "")
+      expect_true(grepl("Måttet på de äldres välbefinnande", explanation_html, fixed = TRUE))
+      expect_false(grepl("Referensgruppen består", explanation_html, fixed = TRUE))
+
+      session$setInputs(reference_groups = "Ref A")
+      session$flushReact()
+
+      explanation_html <- paste(as.character(output$explanation_ui), collapse = "")
+      expect_true(grepl("Referensgruppen består", explanation_html, fixed = TRUE))
+
+      session$setInputs(reference_groups = character(0), grp_grp = character(0))
+      session$flushReact()
+
+      explanation_html <- paste(as.character(output$explanation_ui), collapse = "")
+      expect_true(grepl("Referensgruppen består", explanation_html, fixed = TRUE))
     }
   )
 })

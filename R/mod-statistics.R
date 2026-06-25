@@ -23,10 +23,7 @@ mod_statistics_ui <- function(id, lang = i18n_default_language) {
       ),
       uiOutput(ns("summary_statistics_ui")),
       uiOutput(ns("pairwise_section_ui")),
-      div(
-        style = "margin-bottom: 10px;",
-        tr_md("stats.explanation")
-      ),
+      uiOutput(ns("explanation_ui")),
     )
   )
 }
@@ -591,6 +588,25 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
       stats_df <- summary_statistics()
       build_table(stats_df)
+    })
+
+    output$explanation_ui <- renderUI({
+      show_reference_explanation <- !has_user_data() ||
+        !length(selected_group_definitions()) ||
+        length(current_reference_groups()) > 0
+
+      tagList(
+        div(
+          style = "margin-bottom: 10px;",
+          tr_md("stats.explanation")
+        ),
+        if (show_reference_explanation) {
+          div(
+            style = "margin-bottom: 10px;",
+            tr_md("stats.explanation.ref_group")
+          )
+        }
+      )
     })
 
   })
