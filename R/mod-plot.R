@@ -220,6 +220,10 @@ plot_layers_from_selection <- function(group_definitions, show_raw = FALSE) {
   "user"
 }
 
+plot_show_reference_explanation <- function(layers) {
+  "reference" %in% unique(plot_trim_non_empty(layers))
+}
+
 plot_get_group_indices <- function(user_df, group_def) {
   if (isTRUE(group_def$is_total)) {
     return(seq_len(nrow(user_df)))
@@ -735,6 +739,7 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
   moduleServer(id, function(input, output, session) {
     resolved_lang <- if (is.null(lang)) reactive(i18n_default_language) else lang
     tr <- function(key, ...) i18n_t(resolved_lang(), key, ...)
+    tr_md <- function(key, ...) i18n_t_markdown(resolved_lang(), key, ...)
 
     current_scores <- reactive({
       if (is.null(scores)) {
@@ -960,9 +965,29 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     output$comparison_plot_container <- renderUI({
-      plotly::plotlyOutput(
-        session$ns("comparison_plot"),
-        height = plot_output_height()
+      tagList(
+        plotly::plotlyOutput(
+          session$ns("comparison_plot"),
+          height = plot_output_height()
+        ),
+        uiOutput(session$ns("plot_explanation_ui"))
+      )
+    })
+
+    output$plot_explanation_ui <- renderUI({
+      show_reference_explanation <- plot_show_reference_explanation(plot_layers())
+
+      tagList(
+        div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          tr_md("stats.explanation")
+        ),
+        if (show_reference_explanation) {
+          div(
+            style = "margin-bottom: 10px;",
+            tr_md("stats.explanation.ref_group")
+          )
+        }
       )
     })
 

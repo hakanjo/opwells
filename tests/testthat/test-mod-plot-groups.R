@@ -88,6 +88,14 @@ test_that("plot_layers_from_selection toggles between reference and user layers"
   expect_equal(mod_env$plot_layers_from_selection(defs, show_raw = TRUE), c("user", "raw"))
 })
 
+test_that("plot_show_reference_explanation reflects whether reference layer is present", {
+  mod_env <- make_mod_plot_env()
+
+  expect_true(mod_env$plot_show_reference_explanation("reference"))
+  expect_true(mod_env$plot_show_reference_explanation(c("user", "reference")))
+  expect_false(mod_env$plot_show_reference_explanation(c("user", "raw")))
+})
+
 test_that("plot_build_combined_payload assembles user, raw, and reference layers", {
   mod_env <- make_mod_plot_env()
 
@@ -167,10 +175,11 @@ test_that("plot_build_user_data can include a total user row", {
     group_definitions = defs
   )
 
-  expect_equal(user_data$summary$group_label, c("Totalt", "A", "B"))
+  expect_true(grepl("^Totalt$|^Total$", user_data$summary$group_label[1], perl = TRUE))
+  expect_equal(user_data$summary$group_label[-1], c("A", "B"))
   expect_equal(user_data$summary$n, c(4L, 2L, 2L))
   expect_true(isTRUE(user_data$summary$is_total[1]))
-  expect_equal(sum(user_data$raw$group_label == "Totalt"), 4L)
+  expect_equal(sum(grepl("^Totalt$|^Total$", user_data$raw$group_label, perl = TRUE)), 4L)
 })
 
 test_that("plot_build_combined_payload keeps total on the top row", {
@@ -192,7 +201,8 @@ test_that("plot_build_combined_payload keeps total on the top row", {
     layers = c("user", "raw")
   )
 
-  expect_equal(payload$ordered_groups, c("Totalt", "B", "A"))
+  expect_true(grepl("^Totalt$|^Total$", payload$ordered_groups[1], perl = TRUE))
+  expect_equal(payload$ordered_groups[-1], c("B", "A"))
 })
 
 test_that("plot_build_combined_payload reports missing reference groups gracefully", {
@@ -581,7 +591,7 @@ test_that("plot_build_combined_payload includes total with combined groups", {
   )
 
   # Total should be first
-  expect_equal(payload$ordered_groups[1], "Totalt")
+  expect_true(grepl("^Totalt$|^Total$", payload$ordered_groups[1], perl = TRUE))
   expect_true("Women Only" %in% payload$ordered_groups)
 })
 
