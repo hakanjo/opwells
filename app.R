@@ -75,7 +75,8 @@ server <- function(input, output, session) {
           tr("app.tab.statistics"),
           value = "statistics",
           mod_statistics_ui("statistics", lang = lang)
-        )
+        ),
+        mod_publications_ui("publications", lang = lang)
         
       )
     )
