@@ -18,6 +18,8 @@ sv:
   data_input.help.template_prefix: '**Använd gärna denna mall för uppladdning av data:**'
   data_input.help.template_link: '**mall (.xlsx)**'
   data_input.help: |-
+    **Tänk på att inte ladda upp personuppgifter.**
+
     Ladda upp en datafil (.xlsx, .csv, .tsv, eller .txt).
 
     Din fil för uppladdning måste innehålla en person per rad med svar på respektive OPWELLS fråga skriven med siffrorna
@@ -29,9 +31,9 @@ sv:
     
     Namnen på kolumnerna för respektive fråga måste följa formatet OPWELLS_1, OPWELLS_2, OPWELLS_3, etc.
 
-    Utöver svaren kan du lägga till ytterligare kolumner med andra variabler som du har i dina data och du vill göra jämförelser med. Du kan exempelvis lägga in variabler så som kön eller åldersgrupp. (I mallen är dessa kolumner inkluderade. Om du inte har dessa variabler i dina data så raderar du kolumnerna.) 
+    Utöver svaren på OPWELLS kan du lägga till andra variabler som du vill göra jämförelser med. Dessa variabler måste vara kategorivariabler (t.ex. kön, tidpunkt eller åldersgrupp). Kontinuerliga variabler (exempelvis ålder i år) behöver först delas in i kategorier innan de används i analysen.
     
-    *Tänk på att inte ladda upp personuppgifter.*
+    I mallen finns det kolumner för kön och åldersgrupp. Dessa är exempel.Om du inte har dessa variabler i dina data så kan du radera kolumnerna. Om du har andra variabler än kön och ålder kan du lägga till nya kolumner.
 
   data_input.upload.label: 'Ladda upp data'
   data_input.delimiter.label: Avgränsare
