@@ -363,6 +363,32 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       ref_groups <- current_reference_groups()
       ref_stats <- reference_statistics_raw()
 
+      build_pairwise_row <- function(group_1, group_2, n1, n2, mean1, mean2, p_value) {
+        if (is.finite(mean1) && is.finite(mean2) && mean2 > mean1) {
+          temp_group <- group_1
+          group_1 <- group_2
+          group_2 <- temp_group
+
+          temp_n <- n1
+          n1 <- n2
+          n2 <- temp_n
+
+          temp_mean <- mean1
+          mean1 <- mean2
+          mean2 <- temp_mean
+        }
+
+        data.frame(
+          group_1 = group_1,
+          group_2 = group_2,
+          n1 = n1,
+          n2 = n2,
+          mean_diff = mean1 - mean2,
+          p_value = p_value,
+          stringsAsFactors = FALSE
+        )
+      }
+
       all_groups <- c(user_groups, ref_groups)
       if (length(all_groups) < 2) {
         return(data.frame())
@@ -381,15 +407,17 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
         if (is_g1_user && is_g2_user) {
           x1 <- df$score[df$group == g1]
           x2 <- df$score[df$group == g2]
+          mean1 <- mean(x1)
+          mean2 <- mean(x2)
           p_val <- calculate_ttest_pvalue(x1, x2)
-          data.frame(
+          build_pairwise_row(
             group_1 = g1,
             group_2 = g2,
             n1 = length(x1),
             n2 = length(x2),
-            mean_diff = mean(x1) - mean(x2),
-            p_value = p_val,
-            stringsAsFactors = FALSE
+            mean1 = mean1,
+            mean2 = mean2,
+            p_value = p_val
           )
         } else if ((is_g1_user && is_g2_ref) || (is_g1_ref && is_g2_user)) {
           if (is_g1_ref) {
@@ -417,14 +445,14 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
             ref_n = ref_n
           )
 
-          data.frame(
+          build_pairwise_row(
             group_1 = g1,
             group_2 = g2,
             n1 = length(x1),
             n2 = suppressWarnings(as.integer(round(as.numeric(ref_n)))),
-            mean_diff = mean(x1) - ref_mean,
-            p_value = p_val,
-            stringsAsFactors = FALSE
+            mean1 = mean(x1),
+            mean2 = ref_mean,
+            p_value = p_val
           )
         } else {
           NULL

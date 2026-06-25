@@ -276,3 +276,107 @@ test_that("statistics explanation shows reference text only when reference data 
     }
   )
 })
+
+test_that("statistics module orders pairwise user groups by higher mean", {
+  notification_log <- new.env(parent = emptyenv())
+  notification_log$messages <- character(0)
+
+  mod_env <- make_mod_statistics_env(notification_log)
+
+  user_df <- data.frame(
+    grp = c("A", "A", "B", "B"),
+    Q1 = c("1", "1", "4", "4"),
+    Q2 = c("1", "1", "4", "4"),
+    stringsAsFactors = FALSE
+  )
+
+  likert_state <- list(
+    scaled_scores = c(10, 20, 40, 50),
+    selected_columns = c("Q1", "Q2"),
+    numeric_items = data.frame(Q1 = c(1, 1, 4, 4), Q2 = c(1, 1, 4, 4), stringsAsFactors = FALSE)
+  )
+
+  testServer(
+    mod_env$mod_statistics_server,
+    args = list(
+      data = reactive(user_df),
+      likert_state = reactive(likert_state),
+      active_tab = reactive("statistics")
+    ),
+    {
+      session$flushReact()
+      session$setInputs(grp_grp = c("A", "B"))
+      session$flushReact()
+
+      pairwise_df <- pairwise_table_for_download()
+      expect_true(is.data.frame(pairwise_df))
+      expect_equal(nrow(pairwise_df), 1L)
+
+      expect_equal(pairwise_df[[1]][1], "B")
+      expect_equal(pairwise_df[[2]][1], "A")
+
+      mean_diff <- suppressWarnings(as.numeric(gsub(",", ".", pairwise_df[[5]][1], fixed = TRUE)))
+      expect_true(is.finite(mean_diff))
+      expect_gte(mean_diff, 0)
+    }
+  )
+})
+
+test_that("statistics module orders user-reference comparisons by higher mean", {
+  notification_log <- new.env(parent = emptyenv())
+  notification_log$messages <- character(0)
+
+  mod_env <- make_mod_statistics_env(notification_log)
+
+  mod_env$load_ref_data <- function() {
+    data.frame(
+      group = c("Ref A"),
+      mean = c(40),
+      sd = c(8),
+      `2_3_range` = c(""),
+      q_1_6 = c(30),
+      q_5_6 = c(50),
+      n = c(100),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  user_df <- data.frame(
+    grp = c("A", "A", "A"),
+    Q1 = c("1", "2", "2"),
+    Q2 = c("1", "2", "2"),
+    stringsAsFactors = FALSE
+  )
+
+  likert_state <- list(
+    scaled_scores = c(10, 20, 30),
+    selected_columns = c("Q1", "Q2"),
+    numeric_items = data.frame(Q1 = c(1, 2, 2), Q2 = c(1, 2, 2), stringsAsFactors = FALSE)
+  )
+
+  testServer(
+    mod_env$mod_statistics_server,
+    args = list(
+      data = reactive(user_df),
+      likert_state = reactive(likert_state),
+      active_tab = reactive("statistics")
+    ),
+    {
+      session$flushReact()
+      session$setInputs(grp_grp = "A")
+      session$setInputs(reference_groups = "Ref A")
+      session$flushReact()
+
+      pairwise_df <- pairwise_table_for_download()
+      expect_true(is.data.frame(pairwise_df))
+      expect_equal(nrow(pairwise_df), 1L)
+
+      expect_equal(pairwise_df[[1]][1], "Ref A")
+      expect_equal(pairwise_df[[2]][1], "A")
+
+      mean_diff <- suppressWarnings(as.numeric(gsub(",", ".", pairwise_df[[5]][1], fixed = TRUE)))
+      expect_true(is.finite(mean_diff))
+      expect_gte(mean_diff, 0)
+    }
+  )
+})
