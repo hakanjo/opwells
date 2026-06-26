@@ -1,12 +1,16 @@
 mod_export_ui <- function(id, lang = i18n_default_language) {
   ns <- NS(id)
   tr <- function(key, ...) i18n_t(lang, key, ...)
+  tr_md <- function(key, ...) i18n_t_markdown(lang, key, ...)
 
   tagList(
     h4(tr("export.title")),
     helpText(tr("export.help")),
     downloadButton(ns("download_scores"), tr("export.download_csv")),
-    downloadButton(ns("download_scores_xlsx"), tr("export.download_xlsx"))
+    downloadButton(ns("download_scores_xlsx"), tr("export.download_xlsx")),
+    h5(tr("export.share.title")),
+    helpText(tr_md("export.share.invitation")),
+    helpText(tr_md("export.share.attach_instruction"))
   )
 }
 

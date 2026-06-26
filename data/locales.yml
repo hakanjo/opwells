@@ -58,6 +58,10 @@ sv:
   export.help: Ladda ner dina data med en ny kolumn för måttet på äldres välbefinnande ('OPWELLS-mått') beräknad från dina data. Måttet är estimerat utifrån deras svar på enkäten och presenteras på en 0–100 skala, där 0 innebär lägst välbefinnande och 100 innebär högst välbefinnande.
   export.download_csv: Ladda ner (.csv)
   export.download_xlsx: Ladda ner (.xlsx)
+  export.share.title: Vill du hjälpa till att utveckla OPWELLS?
+  export.share.invitation: Skicka gärna dina data till [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se) för att bidra till den fortsatta utvecklingen av OPWELLS.
+  export.share.attach_instruction: |-
+    Glöm inte a bifoga den uppladdade filen innan du skickar. Tänk på att inte skicka personuppgifter.
   export.column.scaled_score: OPWELLS-mått
   export.status.no_data: Ladda upp data för att aktivera export.
   export.status.no_cols: Hittade inga OPWELLS/F/Q-kolumner i den uppladdade filen. Filerna innehåller originaldata utan OPWELLS-mått.
@@ -150,17 +154,21 @@ sv:
     Referensgruppen består av de anonyma personer som deltog i utvecklingen av OPWELLS. Deltagarna rekryterades från nio svenska projekt- och samverkanskommuner. Cirka 20 % rekryterades via hemtjänsten, 20 % via seniororganisationer och 10 % via öppna verksamheter. Resterande 50 % rekryterades genom en kombination av dessa verksamheter. Totalt inkluderades data från 1 882 personer. Av dessa var 70 % kvinnor och 30 % män, 40 % 79 år eller yngre och 60 % 80 år eller äldre, och 88 % födda i Sverige och 12 % födda utanför Sverige.
 
   publications.description: |-
-    Arbetet har hittills resulterat i tre planerade vetenskapliga publikationer, vilka än så länge finns som så kallade preprints. Innehållet kan därför komma att justeras innan en slutlig version publiceras i en vetenskaplig tidskrift. Fram tills att artiklarna publiceras i vetenskapliga tidskrifter hänvisar vi till följande referenser (på länkarna hittar ni artiklarna)
+    Arbetet har hittills resulterat i tre planerade vetenskapliga publikationer, vilka än så länge finns som så kallade preprints. Innehållet kan därför komma att justeras innan en slutlig version publiceras i en vetenskaplig tidskrift. Fram tills att artiklarna publiceras i vetenskapliga tidskrifter hänvisar vi till följande referenser (på länkarna hittar ni artiklarna).
 
-    Studie med kognitiva intervjuer på svenska (här beskrivs utvecklingen av OPWELLS)
+    **Studie med kognitiva intervjuer på svenska**
+
+    *Här beskrivs utvecklingen av OPWELLS.*
 
     Möllerberg, M.-L., Preuter, M., Årestedt, K., & Melin, J. (2026). Developing a Well-Being Scale for Older Persons in Sweden: A Cognitive Interview Study (Dkb8x_v1). SocArXiv. [https://osf.io/preprints/socarxiv/dkb8x_v1/](https://osf.io/preprints/socarxiv/dkb8x_v1/)
 
-    Studie av OPWELLS psykometri (här "fastställs" OPWELLS)
+    **Studie av OPWELLS psykometri**
+
+    *Här "fastställs" OPWELLS.*
 
     Melin, J., Preuter, M., Årestedt, K., & Möllerberg, M.-L. (2026). Reinventing Well-being Measurements for Older Persons: Psychometric Evaluation of the Older Persons' Well-being Scale (OPWELLS) (V92xb_v1). SocArXiv. [https://osf.io/preprints/socarxiv/v92xb_v1/](https://osf.io/preprints/socarxiv/v92xb_v1/)
 
-    Studie med kognitiva intervjuer på arabiska, bosniska och finska
+    **Studie med kognitiva intervjuer på arabiska, bosniska och finska**
 
     Möllerberg, M.-L., Khalaf, A., Hadziabdic, E., Hedman, C., Preuter, M., Årestedt, K., & Melin, J. (2026). Establishing Linguistic and Cultural Equivalence of the Older Persons' Well-being Scale's (OPWELLS) Arabic, Bosnian, and Finnish Versions: A Cognitive Interview Study with Residents in Sweden (5j8va_v1). SocArXiv. [https://osf.io/preprints/socarxiv/5j8va_v1/](https://osf.io/preprints/socarxiv/5j8va_v1/)
 
@@ -211,6 +219,10 @@ en:
   export.help: Download your data with a new column for the measure of older persons' wellbeing ('OPWELLS measure') calculated from your data. The measure is estimated based on their responses to the questionnaire and is presented on a 0–100 scale, where 0 indicates the lowest wellbeing and 100 indicates the highest wellbeing.
   export.download_csv: Download results table (.csv)
   export.download_xlsx: Download results table (.xlsx)
+  export.share.title: Would you like to help develop OPWELLS?
+  export.share.invitation: To help develop OPWELLS, please share your data by sending it to [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
+  export.share.attach_instruction: |-
+    Do not forget to attach your data. Remember to not send personally identifiable information.
   export.column.scaled_score: OPWELLS measure
   export.status.no_data: Upload data to enable export.
   export.status.no_cols: No OPWELLS/F/Q columns were found in the uploaded file. The files contain the original data without an OPWELLS measure.
