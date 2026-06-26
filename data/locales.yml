@@ -9,13 +9,19 @@ sv:
   about.description: |-
     - OPWELLS är en enkät baserad på 10 frågor för att mäta äldres välbefinnande. OPWELLS är en förkortning för enkätens engelska benämning, *Older Persons Wellbeing Scale*.
     - Måttet på de äldres välbefinnande är estimerat utifrån deras svar på enkäten och presenteras på en 0–100 skala, där 0 innebär lägst välbefinnande och 100 innebär högst välbefinnande.
+    - Det finns en Q&A för OPWELLS [här 🔗](#).
     - I denna webbapplikation kan du ta fram mått på välbefinnande utifrån individers enkätsvar.
-    - Du kan även illustrera skillnader mellan grupper och göra statistiska jämförelser inom dina data samt jämföra deras svar mot en referenspopulation*.
-    - Under "Ladda upp data" kan du ladda upp dina enkätsvar tillsammans med ytterligare variabler som du vill kunna göra jämförelser för. Använd gärna mallen som finns där för att se hur dina data ska vara strukturerade.
-    - OPWELLS är framtagna inom ramen för projektet "Mätning av äldres välbefinnande" och har finansierats av [Familjen Kamprads Stiftelse 🔗](https://familjenkampradsstiftelse.se). Om du har frågor om OPWELLS kan du [läsa mer här 🔗](#) eller kontakta [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
+
+        - **Ladda upp data**: Här laddar du upp dina enkätsvar tillsammans med ytterligare variabler som du vill kunna göra jämförelser för.
+        - **Definiera grupper**: Här skapas subgrupper utifrån kombinationer av variabler i dina data. Exempelvis, om du har variablerna kön och bakgrund kan du skapa en subgrupp av kvinnor med utländsk bakgrund.
+        - **Illustrationer:** Här kan du göra visualiseringar av dina data samt jämföra deras välbefinnande med en referenspopulation\*.
+        - **Statistiska jämförelser:** Här kan du få deskriptiv och jämförande statistisk för dina data samt jämföra deras välbefinnande med en referenspopulation\*.
+
+    - Webbapplikation är framtagen som en första version och kan komma att uppdateras med nya funktioner i framtiden.
+    - OPWELLS är framtagna inom ramen för projektet "Mätning av äldres välbefinnande" och har finansierats av [Familjen Kamprads Stiftelse 🔗](https://familjenkampradsstiftelse.se).
+    - Om du har frågor om OPWELLS eller webbapplikationen kontakta [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
 
     \**Referensgruppen består av de (anonyma) personerna som deltog i utvecklingen av OPWELLS. De kommer från nio svenska projektparts- och samverkanskommuner.*
-  
   data_input.help.template_prefix: '**Använd gärna denna mall för uppladdning av data:**'
   data_input.help.template_link: '**mall (.xlsx)**'
   data_input.help: |-

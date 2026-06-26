@@ -6,8 +6,11 @@ mod_about_ui <- function(id, lang = i18n_default_language) {
     tr("app.tab.about"),
     value = "about",
     tags$div(
-      style = "margin: 16px 0 20px 0;",
-      tr_md("about.description")
+      style = "max-width: 60%; margin: 16px auto 20px auto;",
+      tags$style("
+        #about-content li { margin-bottom: 0.6em; }
+      "),
+      tags$div(id = "about-content", tr_md("about.description"))
     )
   )
 }

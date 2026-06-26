@@ -6,7 +6,7 @@ mod_publications_ui <- function(id, lang = i18n_default_language) {
     tr("app.tab.publications"),
     value = "publications",
     tags$div(
-      style = "margin: 16px 0 20px 0;",
+      style = "max-width: 60%; margin: 16px auto 20px auto;",
       tr_md("publications.description")
     )
   )
