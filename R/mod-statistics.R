@@ -183,11 +183,14 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
           col_nm
         }
 
+        selected <- selected_group_selections()[[col_nm]]
+        selected <- selected[selected %in% col_groups[[col_nm]]]
+
         selectizeInput(
           session$ns(paste0("grp_", col_nm)),
           label = label,
           choices = col_groups[[col_nm]],
-          selected = NULL,
+          selected = selected,
           multiple = TRUE,
           options = list(plugins = list("remove_button"))
         )

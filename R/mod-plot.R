@@ -849,11 +849,14 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
           col
         }
 
+        selected <- selected_group_selections()[[col]]
+        selected <- selected[selected %in% groups[[col]]]
+
         selectizeInput(
           ns(paste0("grp_", col)),
           label = label,
           choices = groups[[col]],
-          selected = NULL,
+          selected = selected,
           multiple = TRUE,
           options = list(plugins = list("remove_button"))
         )
