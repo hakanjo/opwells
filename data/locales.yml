@@ -50,6 +50,7 @@ sv:
   data_input.delimiter.semicolon: Semikolon
   data_input.validation.file_type: Vänligen ladda upp xlsx-, csv-, eller tsv-/txt-filer.
   data_input.validation.parse_fail: Kunde inte analysera den uppladdade filen.
+  data_input.validation.invalid_values: 'OPWELLS/F/Q-kolumner får endast innehålla siffrorna 0-4. Ogiltiga värden hittades i: %s.'
   data_input.status.no_cols: Hittade inga OPWELLS/F/Q-kolumner i den uppladdade filen. Mätvärden kunde inte beräknas.
   data_input.status.score_exact: 'OPWELLS-mått beräknat från %d kolumner: %s.'
   data_input.status.score_nonexact: 'OPWELLS-mått beräknat från %d kolumner (exakt 10 rekommenderas): %s.'
@@ -138,7 +139,7 @@ sv:
   stats.pairwise.col.mean_diff: Medelskillnad
   stats.pairwise.col.p_value: p-värde (t-test)
   stats.notif.no_data: Ingen användardata laddad. Ladda data i fliken "Ladda upp data" för att visa jämförelser.
-  stats.summary.no_scores: OPWELLS saknas.
+  stats.summary.no_scores: **OPWELLS saknas.**
   stats.download.no_summary_data: Ingen deskriptiv statistik att exportera.
   stats.download.no_pairwise_data: Inga parvisa jämförelser att exportera.
   stats.include_total: Inkludera total
@@ -201,6 +202,7 @@ en:
   data_input.delimiter.semicolon: Semicolon
   data_input.validation.file_type: Please upload xlsx, csv, or tsv/txt files.
   data_input.validation.parse_fail: Could not parse the uploaded file.
+  data_input.validation.invalid_values: 'OPWELLS/F/Q columns may only contain numbers 0-4. Invalid values were found in: %s.'
   data_input.status.no_cols: No OPWELLS/F/Q columns were found in the uploaded file. Measures could not be calculated.
   data_input.status.score_exact: 'OPWELLS measure calculated from %d columns: %s.'
   data_input.status.score_nonexact: 'OPWELLS measure calculated from %d columns (exactly 10 recommended): %s.'

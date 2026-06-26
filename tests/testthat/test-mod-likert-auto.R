@@ -86,3 +86,35 @@ test_that("data_input module excludes OPWELLS/F/Q columns without numeric suffix
     }
   )
 })
+
+test_that("data_input module blocks scoring when OPWELLS/F/Q values are outside 0-4", {
+  mod_env <- make_mod_data_input_env()
+
+  user_df <- data.frame(
+    Q1 = c("1", "2", "5"),
+    Q2 = c("0", "1", "2"),
+    stringsAsFactors = FALSE
+  )
+
+  tmp <- tempfile(fileext = ".csv")
+  on.exit(unlink(tmp), add = TRUE)
+  utils::write.csv(user_df, tmp, row.names = FALSE)
+
+  testServer(
+    mod_env$mod_data_input_server,
+    {
+      session$setInputs(upload_file = list(
+        name = "test.csv",
+        size = file.size(tmp),
+        type = "text/csv",
+        datapath = tmp
+      ))
+      session$flushReact()
+
+      state <- session$returned$likert_state()
+
+      expect_equal(sort(state$selected_columns), c("Q1", "Q2"))
+      expect_null(state$scaled_scores)
+    }
+  )
+})

@@ -169,6 +169,28 @@ mod_data_input_server <- function(id, lang = NULL) {
       ]
     }
 
+    find_invalid_likert_columns <- function(df, likert_cols) {
+      if (!is.data.frame(df) || nrow(df) == 0 || !length(likert_cols)) {
+        return(character(0))
+      }
+
+      likert_cols <- likert_cols[likert_cols %in% names(df)]
+      if (!length(likert_cols)) {
+        return(character(0))
+      }
+
+      likert_cols[vapply(likert_cols, function(col_name) {
+        values <- trimws(as.character(df[[col_name]]))
+        values <- values[!is.na(values) & values != ""]
+
+        if (!length(values)) {
+          return(FALSE)
+        }
+
+        any(!grepl("^[0-4]$", values))
+      }, logical(1))]
+    }
+
     output$download_template <- downloadHandler(
       filename = function() {
         paste0("OPWELLS-", Sys.Date(), ".xlsx")
@@ -229,6 +251,17 @@ mod_data_input_server <- function(id, lang = NULL) {
 
       auto_cols <- auto_select_cols(names(df))
       selected_cols(auto_cols)
+
+      invalid_cols <- find_invalid_likert_columns(df, auto_cols)
+      if (length(invalid_cols) > 0) {
+        showNotification(
+          tr("data_input.validation.invalid_values", paste(invalid_cols, collapse = ", ")),
+          type = "error",
+          duration = 15
+        )
+        scores(NULL)
+        return()
+      }
 
       if (length(auto_cols) > 0 && nrow(df) > 0) {
         scores(compute_scaled_score(df, auto_cols))
