@@ -139,7 +139,7 @@ sv:
   stats.pairwise.col.mean_diff: Medelskillnad
   stats.pairwise.col.p_value: p-värde (t-test)
   stats.notif.no_data: Ingen användardata laddad. Ladda data i fliken "Ladda upp data" för att visa jämförelser.
-  stats.summary.no_scores: **OPWELLS saknas.**
+  stats.summary.no_scores: OPWELLS saknas. Kontrollera att den uppladdade filen innehåller OPWELLS/F/Q-kolumner med giltiga värden (0-4) för att beräkna måttet.
   stats.download.no_summary_data: Ingen deskriptiv statistik att exportera.
   stats.download.no_pairwise_data: Inga parvisa jämförelser att exportera.
   stats.include_total: Inkludera total
