@@ -40,8 +40,7 @@ sv:
 
     Utöver svaren på OPWELLS kan du lägga till andra variabler som du vill göra jämförelser med. Dessa variabler måste vara kategorivariabler (t.ex. kön, tidpunkt eller åldersgrupp). Kontinuerliga variabler (exempelvis ålder i år) behöver först delas in i kategorier innan de används i analysen.
     
-    I mallen finns det kolumner för kön och åldersgrupp. Dessa är exempel.Om du inte har dessa variabler i dina data så kan du radera kolumnerna. Om du har andra variabler än kön och ålder kan du lägga till nya kolumner.
-
+    I mallen finns det kolumner för kön och åldersgrupp. Dessa är exempel. Om du inte har dessa variabler i dina data så kan du radera kolumnerna. Om du har andra variabler än kön och ålder kan du lägga till nya kolumner.
   data_input.upload.label: 'Ladda upp data'
   data_input.delimiter.label: Avgränsare
   data_input.delimiter.auto: Automatisk
@@ -317,14 +316,18 @@ en:
   publications.description: |-
     So far, this work has resulted in three planned scientific publications, which are currently available as preprints. The content may therefore be revised before a final version is published in a scientific journal. Until the articles are published in scientific journals, we refer to the following references (the links lead to the articles).
 
-    Study with cognitive interviews in Swedish (this describes the development of OPWELLS)
+    **Study with cognitive interviews in Swedish**
+    
+    *This publication describes the development of OPWELLS.*
 
     Möllerberg, M.-L., Preuter, M., Årestedt, K., & Melin, J. (2026). Developing a Well-Being Scale for Older Persons in Sweden: A Cognitive Interview Study (Dkb8x_v1). SocArXiv. [https://osf.io/preprints/socarxiv/dkb8x_v1/](https://osf.io/preprints/socarxiv/dkb8x_v1/)
 
-    Study of OPWELLS psychometrics (this is where OPWELLS is "established")
+    **Study of OPWELLS psychometrics**
+    
+    *This is where OPWELLS is "established".*
 
     Melin, J., Preuter, M., Årestedt, K., & Möllerberg, M.-L. (2026). Reinventing Well-being Measurements for Older Persons: Psychometric Evaluation of the Older Persons' Well-being Scale (OPWELLS) (V92xb_v1). SocArXiv. [https://osf.io/preprints/socarxiv/v92xb_v1/](https://osf.io/preprints/socarxiv/v92xb_v1/)
 
-    Study with cognitive interviews in Arabic, Bosnian, and Finnish
+    **Study with cognitive interviews in Arabic, Bosnian, and Finnish**
 
     Möllerberg, M.-L., Khalaf, A., Hadziabdic, E., Hedman, C., Preuter, M., Årestedt, K., & Melin, J. (2026). Establishing Linguistic and Cultural Equivalence of the Older Persons' Well-being Scale's (OPWELLS) Arabic, Bosnian, and Finnish Versions: A Cognitive Interview Study with Residents in Sweden (5j8va_v1). SocArXiv. [https://osf.io/preprints/socarxiv/5j8va_v1/](https://osf.io/preprints/socarxiv/5j8va_v1/)
