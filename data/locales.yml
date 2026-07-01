@@ -92,7 +92,7 @@ sv:
   ref_group.born_outside_sweden: Född utanför Sverige (ref.)
 
   plot.help: |-
-    Illustrera skillnader i välbefinnande mellan grupper. Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata. 
+    Illustrera skillnader i välbefinnande mellan grupper. Välj en eller flera grupper i en eller flera kolumner.
     
     Markören visar gruppens medelvärde, linjen visar spannet som täcker ⅔ centrerat av svaren. Håll muspekaren över punkterna för detaljer.
    
@@ -121,7 +121,7 @@ sv:
   stats.help: |-
     Sammanfatta skillnader i välbefinnande mellan grupper.
     
-    Välj en eller flera grupper i en eller flera kolumner. När inga grupper är valda visas referensdata.
+    Välj en eller flera grupper i en eller flera kolumner.
 
     För varje kategori visas medel, standardavvikelse (SD) och intervallet som täcker ⅔ av svaren.
   stats.summary_title: Statistik per kategori
@@ -244,7 +244,7 @@ en:
   define_groups.defined_groups: Defined groups
 
   plot.help: |-
-    Illustrate differences in wellbeing between groups. Select one or more groups in one or more columns. When no groups are selected, reference data are shown.
+    Illustrate differences in wellbeing between groups. Select one or more groups in one or more columns.
 
     The marker shows the group mean, and the line shows the range that covers the central ⅔ of the responses. Hover over the points for details.
 
@@ -281,7 +281,7 @@ en:
   stats.help: |-
     Summarize differences in wellbeing between groups.
     
-    Select one or more groups in one or more columns. When no groups are selected, reference data are shown.
+    Select one or more groups in one or more columns.
 
     For each category, the mean, standard deviation (SD), and the range that covers ⅔ of the responses are shown.
 

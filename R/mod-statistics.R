@@ -14,13 +14,7 @@ mod_statistics_ui <- function(id, lang = i18n_default_language) {
     ),
     column(
       width = 9,
-      h4(tr("stats.summary_title")),
-      div(
-        style = "margin-bottom: 10px;",
-        downloadButton(ns("download_summary_csv"), tr("export.download_csv")),
-        tags$span(style = "display: inline-block; width: 8px;"),
-        downloadButton(ns("download_summary_xlsx"), tr("export.download_xlsx"))
-      ),
+      uiOutput(ns("summary_header_ui")),
       uiOutput(ns("summary_statistics_ui")),
       uiOutput(ns("pairwise_section_ui")),
       uiOutput(ns("explanation_ui")),
@@ -485,7 +479,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
 
     summary_table_for_download <- reactive({
       if (!has_user_data()) {
-        return(reference_summary_statistics())
+        return(data.frame())
       }
 
       state <- current_likert_state()
@@ -494,7 +488,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       if (!length(selected_group_definitions())) {
-        return(reference_summary_statistics())
+        return(data.frame())
       }
 
       summary_statistics()
@@ -603,9 +597,29 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
     )
 
+    output$summary_header_ui <- renderUI({
+      state <- current_likert_state()
+      has_scores <- !is.null(state) && !is.null(state$scaled_scores)
+      has_groups <- length(selected_group_definitions()) > 0
+
+      if (!has_user_data() || !has_scores || !has_groups) {
+        return(NULL)
+      }
+
+      tagList(
+        h4(tr("stats.summary_title")),
+        div(
+          style = "margin-bottom: 10px;",
+          downloadButton(session$ns("download_summary_csv"), tr("export.download_csv")),
+          tags$span(style = "display: inline-block; width: 8px;"),
+          downloadButton(session$ns("download_summary_xlsx"), tr("export.download_xlsx"))
+        )
+      )
+    })
+
     output$summary_statistics_ui <- renderUI({
       if (!has_user_data()) {
-        return(build_table(reference_summary_statistics()))
+        return(NULL)
       }
 
       state <- current_likert_state()
@@ -614,7 +628,7 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
       }
 
       if (!length(selected_group_definitions())) {
-        return(build_table(reference_summary_statistics()))
+        return(NULL)
       }
 
       stats_df <- summary_statistics()
@@ -622,9 +636,15 @@ mod_statistics_server <- function(id, data = NULL, likert_state = NULL, active_t
     })
 
     output$explanation_ui <- renderUI({
-      show_reference_explanation <- !has_user_data() ||
-        !length(selected_group_definitions()) ||
-        length(current_reference_groups()) > 0
+      state <- current_likert_state()
+      has_scores <- !is.null(state) && !is.null(state$scaled_scores)
+      has_groups <- length(selected_group_definitions()) > 0
+
+      if (!has_user_data() || !has_scores || !has_groups) {
+        return(NULL)
+      }
+
+      show_reference_explanation <- length(current_reference_groups()) > 0
 
       tagList(
         div(
