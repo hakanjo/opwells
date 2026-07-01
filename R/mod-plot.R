@@ -935,8 +935,6 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
         if (has_reference_groups) {
           layers <- c(layers, "reference")
         }
-      } else {
-        layers <- c(layers, "reference")
       }
 
       unique(layers)
@@ -968,6 +966,10 @@ mod_plot_server <- function(id, data = NULL, scores = NULL, item_cols = NULL, gr
     })
 
     output$comparison_plot_container <- renderUI({
+      if (!length(group_definitions())) {
+        return(NULL)
+      }
+
       tagList(
         plotly::plotlyOutput(
           session$ns("comparison_plot"),
