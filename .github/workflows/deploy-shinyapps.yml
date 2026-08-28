@@ -49,6 +49,7 @@ jobs:
               appDir = ".",
               appName = "elderly_wellbeing",
               appTitle = "elderly_wellbeing",
-              server = "shinyapps.io"
+              server = "shinyapps.io",
+              forceUpdate = TRUE
             )
           '
