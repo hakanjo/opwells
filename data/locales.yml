@@ -1,5 +1,5 @@
 sv:
-  app.title: Test
+  app.title: ÄLdres välbefinnande - OPWELLS
   app.tab.about: Om OPWELLS
   app.tab.data_input: Ladda upp data
   app.tab.define_groups: Definiera grupper
@@ -19,6 +19,7 @@ sv:
 
     - Webbapplikation är framtagen som en första version och kan komma att uppdateras med nya funktioner i framtiden.
     - OPWELLS är framtagna inom ramen för projektet "Mätning av äldres välbefinnande" och har finansierats av [Familjen Kamprads Stiftelse 🔗](https://familjenkampradsstiftelse.se).
+    - Medverkadnde i arbetet har varit Håkan Johansson (Region Kalmar), [Jeanette Melin 🔗](https://www.lnu.se/personal/jeanette.melin) (Linnéuniversitetet), [Kristofer Årestedt 🔗](https://www.lnu.se/personal/kristofer.arestedt) (Linnéuniversitetet), [Marie-Louise Möllerberg 🔗](https://mau.se/personer/marie-louise.mollerberg/) (Malmö Universitet) och [Marit Preuter 🔗](https://www.ri.se/sv/person/marit-preuter)(RISE).
     - Om du har frågor om OPWELLS eller webbapplikationen kontakta [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
 
     \**Referensgruppen består av de (anonyma) personerna som deltog i utvecklingen av OPWELLS. De kommer från nio svenska projektparts- och samverkanskommuner.*
@@ -186,7 +187,9 @@ en:
     - In this web application, you can calculate measures of wellbeing based on individuals' questionnaire responses.
     - You can also illustrate differences between groups and make statistical comparisons within your data, as well as compare their responses against a reference population*.
     - Under "Upload data", you can upload your questionnaire responses together with additional variables that you want to use for comparisons. Feel free to use the template provided there to see how your data should be structured.
-    - OPWELLS was developed within the project "Measurement of older persons' wellbeing" and was funded by the [Familjen Kamprads Stiftelse 🔗](https://familjenkampradsstiftelse.se). If you have questions about OPWELLS, you can [read more here 🔗](#) or contact [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
+    - OPWELLS was developed within the project "Measurement of older persons' wellbeing" and was funded by the [Familjen Kamprads Stiftelse 🔗](https://familjenkampradsstiftelse.se). 
+    - Project collaborators: Håkan Johansson (Region Kalmar), [Jeanette Melin 🔗](https://www.lnu.se/personal/jeanette.melin) (Linnéus University), [Kristofer Årestedt 🔗](https://www.lnu.se/personal/kristofer.arestedt) (Linnéus University), [Marie-Louise Möllerberg 🔗](https://mau.se/personer/marie-louise.mollerberg/) (Malmö University) and [Marit Preuter 🔗](https://www.ri.se/sv/person/marit-preuter)(RISE).
+    - If you have questions about OPWELLS, you can [read more here 🔗](#) or contact [jeanette.melin@lnu.se 📧](mailto:jeanette.melin@lnu.se).
 
     \**The reference group consists of the anonymous individuals who participated in the development of OPWELLS. They come from nine Swedish project partner and collaboration municipalities.*
     
